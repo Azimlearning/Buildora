@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude plugin:*)",
+      "Bash(curl -fsSL https://bun.sh/install)",
+      "Bash(bash)",
+      "Bash(export BUN_INSTALL=\"$HOME/.bun\")",
+      "Bash(export PATH=\"$BUN_INSTALL/bin:$PATH\")",
+      "Read(//c/Users/User/.claude/skills/gstack/**)",
+      "Bash(./setup)",
+      "Bash(git clone:*)",
+      "Bash(find . -type f -name *PRD* -o -name *prd* -o -name *architecture* -o -name *structure*)",
+      "Bash(rm -f .git/config)",
+      "Bash(git init:*)",
+      "Bash(git remote:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
