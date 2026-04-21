@@ -1,11 +1,12 @@
 """
-LangGraph Orchestrator - Chains all 4 agents in sequence
+LangGraph Orchestrator - Chains all 5 agents in sequence
 
 This is the main orchestration layer that coordinates:
 - Agent A: Document Reader (PDF parsing & field extraction)
 - Agent B: Monitor (Delay & cost variance detection)
 - Agent C: Permits/Compliance (CIDB scoring)
 - Agent D: Reports (PDF & XLSX generation)
+- Agent E: Alerts/Reminders (Telegram notifications)
 
 Author: Chip/Azim
 """
@@ -13,6 +14,10 @@ Author: Chip/Azim
 from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 import operator
+from backend.agents.agent_a.agent import AgentA
+from backend.core.glm_client import GLMClient
+from backend.core.firebase_client import FirebaseClient
+from backend.core.storage import FirebaseStorage
 
 
 class BuildoraState(TypedDict):
@@ -23,6 +28,7 @@ class BuildoraState(TypedDict):
     alerts: list[dict]  # Agent B output
     compliance_score: dict  # Agent C output
     reports: dict  # Agent D output
+    notifications_sent: int  # Agent E output
     errors: Annotated[list[str], operator.add]  # Accumulated errors
 
 
@@ -30,20 +36,36 @@ def agent_a_node(state: BuildoraState) -> BuildoraState:
     """
     Agent A: Document Reader
     - Parse PDFs using pdfplumber/PyMuPDF
-    - Extract fields via GLM
-    - Store docs in MinIO
+    - Extract fields via Z.AI GLM
+    - Store docs in Firebase Storage
     """
-    # TODO: Implement Agent A logic
+    import asyncio
+
     print(f"[Agent A] Processing {len(state.get('documents', []))} documents...")
 
-    # Placeholder
-    state["extracted_fields"] = {
-        "project_name": "Sample Project",
-        "contractor": "Sample Contractor",
-        "budget": 1000000.0,
-        "start_date": "2024-01-01",
-        "milestones": []
-    }
+    try:
+        # Initialize clients
+        glm_client = GLMClient()
+        storage_client = FirebaseStorage()
+        firestore_client = FirebaseClient()
+
+        # Initialize Agent A
+        agent_a = AgentA(glm_client, storage_client, firestore_client)
+
+        # Process documents
+        result = asyncio.run(agent_a.process_documents(
+            project_id=state["project_id"],
+            documents=state["documents"]
+        ))
+
+        state["extracted_fields"] = result
+        print(f"[Agent A] Successfully processed {result['documents_processed']} documents")
+
+    except Exception as e:
+        error_msg = f"Agent A error: {str(e)}"
+        print(f"[Agent A] {error_msg}")
+        state["errors"].append(error_msg)
+        state["extracted_fields"] = {}
 
     return state
 
@@ -53,13 +75,27 @@ def agent_b_node(state: BuildoraState) -> BuildoraState:
     Agent B: Monitor
     - Check delay > 3 days
     - Check cost variance > 8%
-    - Send Telegram alerts if triggered
+    - Detect anomalies in project data
     """
-    # TODO: Implement Agent B logic
     print("[Agent B] Checking for delays and cost variances...")
 
-    # Placeholder
+    # Placeholder - to be implemented by Harry
     state["alerts"] = []
+
+    return state
+
+
+def agent_e_node(state: BuildoraState) -> BuildoraState:
+    """
+    Agent E: Alerts/Reminders
+    - Send Telegram notifications for critical alerts
+    - Schedule reminders for upcoming milestones
+    """
+    print("[Agent E] Processing alerts and sending notifications...")
+
+    # Placeholder - to be implemented
+    # This agent handles Telegram bot integration
+    state["notifications_sent"] = len(state.get("alerts", []))
 
     return state
 
@@ -114,7 +150,7 @@ def create_buildora_graph() -> StateGraph:
     """
     Create the LangGraph workflow
 
-    Flow: Agent A → Agent B → Agent C (conditional) → Agent D
+    Flow: Agent A → Agent B → Agent E → Agent C (conditional) → Agent D
     """
     workflow = StateGraph(BuildoraState)
 
@@ -123,14 +159,16 @@ def create_buildora_graph() -> StateGraph:
     workflow.add_node("agent_b", agent_b_node)
     workflow.add_node("agent_c", agent_c_node)
     workflow.add_node("agent_d", agent_d_node)
+    workflow.add_node("agent_e", agent_e_node)
 
     # Define edges
     workflow.set_entry_point("agent_a")
     workflow.add_edge("agent_a", "agent_b")
+    workflow.add_edge("agent_b", "agent_e")
 
     # Conditional edge for Agent C
     workflow.add_conditional_edges(
-        "agent_b",
+        "agent_e",
         should_run_agent_c,
         {
             "agent_c": "agent_c",
@@ -164,6 +202,7 @@ async def run_pipeline(project_id: str, documents: list[dict]) -> dict:
         "alerts": [],
         "compliance_score": {},
         "reports": {},
+        "notifications_sent": 0,
         "errors": []
     }
 

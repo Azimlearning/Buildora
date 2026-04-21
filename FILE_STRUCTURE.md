@@ -32,11 +32,10 @@ buildora/
 │   │   │   ├── parsers.py      [Chip/Azim] - pdfplumber + PyMuPDF + Tesseract OCR
 │   │   │   └── prompts.py      [Chip/Azim] - GLM prompts for field extraction
 │   │   │
-│   │   ├── agent_b/            [Monitor - Khair + Harry]
+│   │   ├── agent_b/            [Monitor - Khair]
 │   │   │   ├── __init__.py
 │   │   │   ├── agent.py        [Khair] - main Agent B logic
-│   │   │   ├── delay_checker.py [Khair] - delay >3 days + cost >8% logic
-│   │   │   └── notifier.py     [Harry] - Telegram message sender
+│   │   │   └── delay_checker.py [Khair] - delay >3 days + cost >8% logic
 │   │   │
 │   │   ├── agent_c/            [Permits/Compliance - Harry + Aliasya]
 │   │   │   ├── __init__.py
@@ -45,11 +44,17 @@ buildora/
 │   │   │   └── knowledge_base/
 │   │   │       └── cidb_bisq.json [Harry] - CIDB BISQ checklist — Harry digitises manually
 │   │   │
-│   │   └── agent_d/            [Reports - Farah]
+│   │   ├── agent_d/            [Reports - Farah]
+│   │   │   ├── __init__.py
+│   │   │   ├── agent.py        [Farah] - main Agent D logic
+│   │   │   ├── pdf_generator.py [Farah] - ReportLab branded PDF
+│   │   │   └── excel_generator.py [Farah] - openpyxl XLSX cost tracker
+│   │   │
+│   │   └── agent_e/            [Alerts & Reminders - Harry]
 │   │       ├── __init__.py
-│   │       ├── agent.py        [Farah] - main Agent D logic
-│   │       ├── pdf_generator.py [Farah] - ReportLab branded PDF
-│   │       └── excel_generator.py [Farah] - openpyxl XLSX cost tracker
+│   │       ├── agent.py        [Harry] - main Agent E logic
+│   │       ├── telegram_notifier.py [Harry] - Telegram message sender
+│   │       └── reminder_scheduler.py [Harry] - Schedule and send reminders
 │   │
 │   ├── api/                    [REST Endpoints]
 │   │   ├── __init__.py
@@ -61,14 +66,9 @@ buildora/
 │   ├── core/                   [Shared Utilities]
 │   │   ├── __init__.py
 │   │   ├── config.py           [Chip/Azim] - reads all .env settings
-│   │   ├── redis_client.py     [Khair] - Redis connection + helper functions
+│   │   ├── firebase_client.py  [Khair] - Firebase Firestore + Realtime DB
 │   │   ├── glm_client.py       [Chip/Azim] - wraps all Z.AI GLM API calls
-│   │   └── storage.py          [Chip/Azim] - MinIO file upload + download
-│   │
-│   ├── db/                     [Database Layer]
-│   │   ├── __init__.py
-│   │   ├── models.py           [Khair] - SQLAlchemy table definitions
-│   │   └── session.py          [Chip/Azim] - PostgreSQL connection
+│   │   └── storage.py          [Chip/Azim] - Firebase Storage for file upload/download
 │   │
 │   └── tests/                  [Test Suite]
 │       ├── __init__.py
@@ -145,8 +145,8 @@ buildora/
 ```python
 # Absolute imports from project root
 from backend.agents.orchestrator import run_pipeline
-from backend.core.redis_client import get_redis
-from backend.db.models import Project
+from backend.core.firebase_client import get_firestore, get_realtime_db
+from backend.core.glm_client import GLMClient
 
 # Relative imports within same package
 from .parsers import extract_pdf_text
@@ -172,10 +172,9 @@ import { helper } from './utils/helpers'
 
 | Directory | Purpose | Who Owns |
 |-----------|---------|----------|
-| `agents/` | All AI agent logic | Chip/Azim, Khair, Harry, Aliasya, Farah |
+| `agents/` | All AI agent logic (A, B, C, D, E) | Chip/Azim, Khair, Harry, Aliasya, Farah |
 | `api/` | FastAPI route handlers | Chip/Azim, Khair, Farah |
-| `core/` | Shared utilities (Redis, GLM, MinIO, config) | Chip/Azim, Khair |
-| `db/` | Database models and connections | Khair, Chip/Azim |
+| `core/` | Shared utilities (Firebase, GLM, Storage, config) | Chip/Azim, Khair |
 | `tests/` | All test files | All team members |
 
 ### Frontend Structure
@@ -215,9 +214,9 @@ import { helper } from './utils/helpers'
 | Owner | Primary Directories | Can Modify |
 |-------|---------------------|------------|
 | **Chip/Azim** | `backend/agents/orchestrator.py`<br>`backend/agents/agent_a/`<br>`backend/api/upload.py`<br>`backend/core/` | All backend infrastructure |
-| **Farah** | `frontend/`<br>`backend/agents/agent_d/`<br>`backend/api/reports.py` | All frontend + Agent D |
-| **Khair** | `backend/db/`<br>`backend/core/redis_client.py`<br>`backend/agents/agent_b/agent.py`<br>`backend/api/milestones.py` | Database + Redis + Agent B |
-| **Harry** | `backend/agents/agent_b/notifier.py`<br>`backend/agents/agent_c/knowledge_base/` | Telegram + CIDB data |
+| **Farah** | `frontend/`<br>`backend/agents/agent_d/`<br>`backend/api/reports.py` | All frontend + Agent D + UI/UX fonts |
+| **Khair** | `backend/core/firebase_client.py`<br>`backend/agents/agent_b/agent.py`<br>`backend/api/milestones.py` | Firebase + Agent B |
+| **Harry** | `backend/agents/agent_e/`<br>`backend/agents/agent_c/knowledge_base/` | Agent E (Alerts/Reminders) + CIDB data |
 | **Aliasya** | `backend/agents/agent_c/agent.py`<br>`backend/agents/agent_c/compliance.py` | Agent C logic |
 
 ---

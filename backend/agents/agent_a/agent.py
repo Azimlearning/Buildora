@@ -3,31 +3,42 @@ Agent A: Document Reader
 
 Responsibilities:
 - Parse PDF documents (digital and scanned)
-- Extract structured fields using GLM
-- Store documents in MinIO
-- Write extracted data to Redis for Agent B
+- Extract structured fields using Z.AI GLM
+- Store documents in Firebase Storage
+- Write extracted data to Firestore for Agent B
 
 Author: Chip/Azim
 """
 
 from typing import Dict, List, Any
+import os
+from backend.agents.agent_a.parsers import parse_pdf_with_fallback
+from backend.agents.agent_a.prompts import get_extraction_prompt
+from backend.core.glm_client import GLMClient
+from backend.core.storage import FirebaseStorageClient
+from backend.core.firebase_client import FirestoreClient
 
 
 class AgentA:
     """Document reader and field extraction agent"""
 
-    def __init__(self, glm_client, minio_client, redis_client):
+    def __init__(
+        self,
+        glm_client: GLMClient,
+        storage_client: FirebaseStorageClient,
+        firestore_client: FirestoreClient
+    ):
         """
         Initialize Agent A with required clients
 
         Args:
-            glm_client: GLM API client for field extraction
-            minio_client: MinIO client for document storage
-            redis_client: Redis client for state management
+            glm_client: Z.AI GLM API client for field extraction
+            storage_client: Firebase Storage client for document storage
+            firestore_client: Firestore client for database operations
         """
         self.glm = glm_client
-        self.minio = minio_client
-        self.redis = redis_client
+        self.storage = storage_client
+        self.db = firestore_client
 
     async def process_documents(
         self, project_id: str, documents: List[Dict[str, Any]]
@@ -42,21 +53,63 @@ class AgentA:
         Returns:
             Extracted fields dictionary
         """
-        extracted_fields = {
-            "project_id": project_id,
-            "documents_processed": len(documents),
-            "fields": {}
-        }
+        all_extracted_fields = []
 
         for doc in documents:
-            # TODO: Implement document processing
-            # 1. Parse PDF using parsers.py
-            # 2. Extract fields using prompts.py + GLM
-            # 3. Store in MinIO
-            # 4. Write to Redis
-            pass
+            try:
+                file_path = doc.get("file_path")
+                filename = doc.get("filename", os.path.basename(file_path))
 
-        return extracted_fields
+                # 1. Parse PDF
+                text = await self.parse_pdf(file_path)
+
+                # 2. Extract fields using GLM
+                fields = await self.extract_fields(text)
+
+                # 3. Store document in Firebase Storage
+                storage_path = f"projects/{project_id}/{filename}"
+                storage_url = await self.storage.upload_file(
+                    local_path=file_path,
+                    remote_path=storage_path
+                )
+
+                # 4. Save document metadata to Firestore
+                doc_id = await self.db.save_document(
+                    project_id=project_id,
+                    document_data={
+                        "filename": filename,
+                        "storage_path": storage_path,
+                        "storage_url": storage_url,
+                        "status": "processed"
+                    }
+                )
+
+                # 5. Save extracted fields to Firestore
+                fields_id = await self.db.save_extracted_fields(
+                    project_id=project_id,
+                    document_id=doc_id,
+                    fields=fields
+                )
+
+                all_extracted_fields.append({
+                    "document_id": doc_id,
+                    "filename": filename,
+                    "fields": fields,
+                    "fields_id": fields_id
+                })
+
+            except Exception as e:
+                print(f"Error processing document {doc.get('filename')}: {str(e)}")
+                all_extracted_fields.append({
+                    "filename": doc.get("filename"),
+                    "error": str(e)
+                })
+
+        return {
+            "project_id": project_id,
+            "documents_processed": len(documents),
+            "extracted_fields": all_extracted_fields
+        }
 
     async def parse_pdf(self, file_path: str) -> str:
         """
@@ -68,49 +121,51 @@ class AgentA:
         Returns:
             Extracted text content
         """
-        # TODO: Implement using parsers.py
-        # - Try pdfplumber first (digital PDFs)
-        # - Fall back to PyMuPDF + Tesseract (scanned PDFs)
-        pass
+        return parse_pdf_with_fallback(file_path)
 
     async def extract_fields(self, text: str) -> Dict[str, Any]:
         """
-        Extract structured fields from text using GLM
+        Extract structured fields from text using Z.AI GLM
 
         Args:
             text: Raw text from PDF
 
         Returns:
-            Structured field dictionary
+            Structured field dictionary with ≥10 fields
         """
-        # TODO: Implement using prompts.py + glm_client
-        # Target fields (≥10):
-        # - project_name, contractor, budget, start_date, end_date
-        # - milestones, deliverables, risks, stakeholders, etc.
-        pass
+        prompt = get_extraction_prompt(text)
+        result = await self.glm.extract_json(prompt)
+
+        return result
 
     async def store_document(self, file_path: str, project_id: str) -> str:
         """
-        Upload document to MinIO
+        Upload document to Firebase Storage
 
         Args:
             file_path: Local file path
             project_id: Project identifier
 
         Returns:
-            MinIO object URL
+            Firebase Storage URL
         """
-        # TODO: Implement using storage.py
-        pass
+        filename = os.path.basename(file_path)
+        remote_path = f"projects/{project_id}/{filename}"
+        return await self.storage.upload_file(file_path, remote_path)
 
-    async def write_to_redis(self, project_id: str, data: Dict[str, Any]) -> None:
+    async def save_to_firestore(self, project_id: str, data: Dict[str, Any]) -> str:
         """
-        Write extracted data to Redis for Agent B
+        Write extracted data to Firestore for Agent B
 
         Args:
             project_id: Project identifier
             data: Extracted fields
+
+        Returns:
+            Document ID in Firestore
         """
-        # TODO: Implement using redis_client
-        # Key format: buildora:project:{project_id}:extracted_fields
-        pass
+        return await self.db.save_extracted_fields(
+            project_id=project_id,
+            document_id=data.get("document_id"),
+            fields=data
+        )

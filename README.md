@@ -27,9 +27,9 @@ docker-compose up -d
 | Member | Component | Branch Prefix |
 |--------|-----------|---------------|
 | **Chip/Azim** | Backend + Orchestrator + Agent A | `azim/` |
-| **Farah** | Frontend + Agent D | `farah/` |
-| **Khair** | Database + Redis + Agent B | `khair/` |
-| **Harry** | Agent B (Telegram) + Agent C (CIDB data) | `harry/` |
+| **Farah** | Frontend + Agent D + UI/UX Fonts | `farah/` |
+| **Khair** | Firebase + Agent B (Monitor) | `khair/` |
+| **Harry** | Agent E (Alerts/Reminders) + CIDB data | `harry/` |
 | **Aliasya** | Agent C (Compliance logic) | `ali/` |
 
 ## Architecture
@@ -37,25 +37,26 @@ docker-compose up -d
 ```
 PM Browser → React Frontend → FastAPI → LangGraph Orchestrator
                                             ↓
-                    ┌───────────────────────┼───────────────────────┐
-                    ↓                       ↓                       ↓
-                Agent A              Agent B              Agent C → Agent D
-            (Doc Reader)           (Monitor)           (Compliance)  (Reports)
-                    ↓                       ↓                       ↓
-                MinIO                  Telegram              PDF + XLSX
-                    └───────────────── Redis ─────────────────┘
+                    ┌───────────────────────┼───────────────────────┬─────────────┐
+                    ↓                       ↓                       ↓             ↓
+                Agent A              Agent B              Agent C → Agent D   Agent E
+            (Doc Reader)           (Monitor)           (Compliance) (Reports) (Alerts)
+                    ↓                       ↓                       ↓             ↓
+            Firebase Storage        Firebase DB          PDF + XLSX      Telegram
+                    └───────────── Firebase Realtime DB ─────────────────┘
 ```
 
 ## System Components
 
-- **Agent A**: PDF parsing & field extraction (pdfplumber, PyMuPDF, Tesseract OCR, GLM)
-- **Agent B**: Delay & cost variance monitoring (>3 days, >8% triggers Telegram alerts)
+- **Agent A**: PDF parsing & field extraction (pdfplumber, PyMuPDF, Tesseract OCR, Z.AI GLM)
+- **Agent B**: Delay & cost variance monitoring (>3 days, >8% detection)
 - **Agent C**: CIDB BISQ compliance scoring (conditional execution)
 - **Agent D**: Report generation (branded PDF + XLSX cost tracker)
-- **Orchestrator**: LangGraph state machine coordinating all agents
-- **Redis**: Shared state store for inter-agent communication
-- **PostgreSQL**: Project records and metadata
-- **MinIO**: Document storage
+- **Agent E**: Alerts & reminders (Telegram notifications, scheduled reminders)
+- **Orchestrator**: LangGraph state machine coordinating all 5 agents
+- **Firebase Firestore**: Project records and metadata
+- **Firebase Realtime Database**: Shared state store for inter-agent communication
+- **Firebase Storage**: Document storage
 
 ## Development Workflow
 
@@ -114,11 +115,11 @@ See [FILE_STRUCTURE.md](./FILE_STRUCTURE.md) for complete structure.
 
 Copy `.env.example` to `.env` and configure:
 
-- `GLM_API_KEY` - Z.AI GLM API key for field extraction
-- `TELEGRAM_BOT_TOKEN` - Telegram bot for Agent B alerts
-- `POSTGRES_*` - Database credentials
-- `REDIS_PASSWORD` - Redis password
-- `MINIO_*` - Object storage credentials
+- `GLM_API_KEY` - Z.AI GLM API key for field extraction (placeholder until provided)
+- `FIREBASE_PROJECT_ID` - Firebase project ID
+- `FIREBASE_CREDENTIALS` - Path to Firebase service account JSON
+- `TELEGRAM_BOT_TOKEN` - Telegram bot for Agent E alerts
+- `TELEGRAM_CHAT_ID` - Telegram chat ID for notifications
 
 ## Tech Stack
 
@@ -126,20 +127,19 @@ Copy `.env.example` to `.env` and configure:
 - FastAPI (Python 3.10+)
 - LangGraph (agent orchestration)
 - pdfplumber, PyMuPDF, Tesseract (PDF parsing)
-- SQLAlchemy + PostgreSQL
-- Redis (state management)
-- MinIO (document storage)
+- Firebase (Firestore + Realtime Database + Storage)
+- Z.AI GLM-4-Flash (field extraction)
 
 **Frontend:**
 - React 18
 - Vite
 - Tailwind CSS
+- Custom UI/UX fonts (Farah)
 
 **Infrastructure:**
 - Docker + Docker Compose
-- PostgreSQL 15
-- Redis 7
-- MinIO
+- Firebase
+- Python 3.10+
 
 ## API Endpoints
 
