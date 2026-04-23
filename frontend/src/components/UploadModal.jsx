@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, X, Search, FileImage, Link as LinkIcon, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, X, Search, FileImage, Link as LinkIcon, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const ACCEPTED_TYPES = [
   { ext: 'PDF',  mime: 'application/pdf' },
@@ -19,11 +19,13 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName }
   const [files, setFiles] = useState([]);
   const [projectTitle, setProjectTitle] = useState('');
   const [isHover, setIsHover] = useState(false);
+  const [error, setError] = useState(null);
   const inputRef = useRef(null);
 
   if (!isOpen) return null;
 
   const handleFiles = (selectedFiles) => {
+    if (error) setError(null);
     const validFiles = Array.from(selectedFiles).filter(f => ACCEPTED_MIME.has(f.type));
     if (validFiles.length > 0) {
       setFiles(prev => [...prev, ...validFiles]);
@@ -44,6 +46,23 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName }
   const onDragLeave = () => setIsHover(false);
 
   const handleContinue = () => {
+    const isTitleEmpty = !projectName && !projectTitle.trim();
+    const isFilesEmpty = files.length === 0;
+
+    if (isTitleEmpty && isFilesEmpty) {
+      setError('Project title is missing and please upload at least one document.');
+      return;
+    }
+    if (isTitleEmpty) {
+      setError('Project title is missing.');
+      return;
+    }
+    if (isFilesEmpty) {
+      setError('Please upload at least one document.');
+      return;
+    }
+
+    setError(null);
     onContinue(files, projectTitle);
     setFiles([]); // Clear on close
     setProjectTitle('');
@@ -81,6 +100,13 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName }
 
         <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
           
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {/* Project Title Input (only for new projects) */}
           {!projectName && (
             <div className="mb-2">
@@ -92,7 +118,10 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName }
                 type="text"
                 placeholder="e.g. KVMRT Line 2 Expansion"
                 value={projectTitle}
-                onChange={(e) => setProjectTitle(e.target.value)}
+                onChange={(e) => {
+                  setProjectTitle(e.target.value);
+                  if (error) setError(null);
+                }}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f97316] focus:ring-1 focus:ring-[#f97316]/30 transition-all placeholder:text-[#9b9794]"
               />
             </div>
@@ -174,8 +203,7 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName }
           
           <button 
             onClick={handleContinue}
-            disabled={files.length === 0 || (!projectName && !projectTitle.trim())}
-            className="bg-[#f97316] hover:bg-[#ea580c] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
+            className="bg-[#f97316] hover:bg-[#ea580c] text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
           >
             Continue Session
             <ArrowRight className="w-4 h-4" />

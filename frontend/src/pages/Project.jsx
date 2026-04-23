@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Activity, ChevronRight, AlertTriangle, Info, BellRing } from 'lucide-react';
-import AgentPanel from '../components/AgentPanel.jsx';
+import { ChevronRight, AlertTriangle, Info, BellRing } from 'lucide-react';
 import ComplianceScore from '../components/ComplianceScore.jsx';
 import ReportDownload from '../components/ReportDownload.jsx';
-import MilestoneForm from '../components/MilestoneForm.jsx';
 import { getProject } from '../api/client.js';
 import SourcesPanel from '../components/SourcesPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import UploadModal from '../components/UploadModal.jsx';
 
-const TABS = ['Overview', 'Agents', 'Compliance', 'Reports'];
+const TABS = ['Overview', 'Compliance', 'Reports'];
 
 function SkeletonProject() {
   return (
@@ -144,8 +142,6 @@ export default function Project() {
   if (!project) return <div className="p-8 text-center text-red-500">Project not found</div>;
 
   const score = project?.health_score ?? 0;
-  const statusColor = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
-  const statusText = project?.status || 'active';
 
   return (
     <div className="flex w-full h-full overflow-hidden bg-[#f7f6f3]">
@@ -177,13 +173,6 @@ export default function Project() {
 
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold text-[#1c1b18] leading-tight font-outfit">{project.name}</h1>
-              <span 
-                className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border"
-                style={{ backgroundColor: statusColor + '10', color: statusColor, borderColor: statusColor + '30' }}
-              >
-                <Activity className="w-3 h-3 inline-block mr-1 mb-0.5" />
-                {statusText === 'active' ? 'Active' : statusText.replace('-', ' ')}
-              </span>
             </div>
             <p className="text-[#6b6860]">{project.contractor || 'Contractor not specified'}</p>
             
@@ -209,15 +198,6 @@ export default function Project() {
           {/* Center Content */}
           <div className="p-10 max-w-4xl mx-auto w-full">
             {activeTab === 'Overview' && <OverviewTab project={project} />}
-            {activeTab === 'Agents' && (
-              <div className="space-y-6 pb-8 animate-slide-up">
-                <AgentPanel jobId={id} demoMode={false} />
-                <div className="card p-6">
-                  <h3 className="font-semibold text-lg text-[#1c1b18] mb-4 font-outfit">Submit Milestone Update</h3>
-                  <MilestoneForm projectId={id} />
-                </div>
-              </div>
-            )}
             {activeTab === 'Compliance' && <ComplianceScore projectId={id} />}
             {activeTab === 'Reports' && <ReportDownload projectId={id} />}
           </div>
