@@ -30,8 +30,8 @@ from datetime import datetime
 
 from backend.agents.agent_e.pdf_generator import ReportGenerator
 from backend.agents.agent_e.excel_generator import ExcelGenerator
-from backend.core.firebase_client import FirebaseClient
-from backend.core.storage import FirebaseStorage
+from backend.core.firebase_client import FirestoreClient
+from backend.core.storage import FirebaseStorageClient
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,8 @@ class AgentE:
 
     def __init__(
         self,
-        firestore_client: FirebaseClient,
-        storage_client: FirebaseStorage,
+        firestore_client: FirestoreClient,
+        storage_client: FirebaseStorageClient,
     ):
         """
         Args:

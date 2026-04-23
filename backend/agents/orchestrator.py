@@ -18,8 +18,8 @@ from backend.agents.agent_a.agent import AgentA
 from backend.agents.agent_c.agent import AgentC
 from backend.agents.agent_e.agent import AgentE
 from backend.core.glm_client import GLMClient
-from backend.core.firebase_client import FirebaseClient
-from backend.core.storage import FirebaseStorage
+from backend.core.firebase_client import FirestoreClient
+from backend.core.storage import FirebaseStorageClient
 
 
 class BuildoraState(TypedDict):
@@ -48,8 +48,8 @@ def agent_a_node(state: BuildoraState) -> BuildoraState:
     try:
         # Initialize clients
         glm_client = GLMClient()
-        storage_client = FirebaseStorage()
-        firestore_client = FirebaseClient()
+        storage_client = FirebaseStorageClient()
+        firestore_client = FirestoreClient()
 
         # Initialize Agent A
         agent_a = AgentA(glm_client, storage_client, firestore_client)
@@ -101,8 +101,8 @@ def agent_e_node(state: BuildoraState) -> BuildoraState:
 
     try:
         # Initialize clients
-        firestore_client = FirebaseClient()
-        storage_client = FirebaseStorage()
+        firestore_client = FirestoreClient()
+        storage_client = FirebaseStorageClient()
 
         # Initialize Agent E
         agent_e = AgentE(
@@ -150,7 +150,7 @@ def agent_c_node(state: BuildoraState) -> BuildoraState:
     try:
         # Initialize clients
         glm_client = GLMClient()
-        firestore_client = FirebaseClient()
+        firestore_client = FirestoreClient()
 
         # Initialize Agent C
         agent_c = AgentC(

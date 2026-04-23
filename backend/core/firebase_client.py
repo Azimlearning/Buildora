@@ -32,8 +32,8 @@ class FirestoreClient:
                 firebase_admin.initialize_app(cred)
             else:
                 if self.settings.DEBUG:
-                    print(f"⚠️  Firebase credentials not found at {cred_path}")
-                    print("⚠️  Running in mock mode for development")
+                    print(f"[Warning] Firebase credentials not found at {cred_path}")
+                    print("[Warning] Running in mock mode for development")
                     firebase_admin.initialize_app()
 
     # Project Operations
