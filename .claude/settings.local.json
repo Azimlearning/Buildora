@@ -14,7 +14,14 @@
       "Bash(git init:*)",
       "Bash(git remote:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(find . -maxdepth 3 -type f -name *.py -o -name *.md -o -name *.yml -o -name *.toml)",
+      "Read(//tmp/**)",
+      "Bash(npm install:*)",
+      "Bash(./install.sh --profile full)"
     ]
   }
 }
