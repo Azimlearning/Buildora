@@ -12,8 +12,8 @@ Author: Chip/Azim
 
 from typing import Dict, List, Any
 import os
-from backend.agents.agent_a.parsers import parse_pdf_with_fallback
-from backend.agents.agent_a.prompts import get_extraction_prompt
+from backend.agents.agent_a.parsers import parse_pdf
+from backend.agents.agent_a.prompts import build_extraction_prompt
 from backend.core.glm_client import GLMClient
 from backend.core.storage import FirebaseStorageClient
 from backend.core.firebase_client import FirestoreClient
@@ -121,7 +121,7 @@ class AgentA:
         Returns:
             Extracted text content
         """
-        return parse_pdf_with_fallback(file_path)
+        return parse_pdf(file_path)
 
     async def extract_fields(self, text: str) -> Dict[str, Any]:
         """
@@ -133,7 +133,7 @@ class AgentA:
         Returns:
             Structured field dictionary with ≥10 fields
         """
-        prompt = get_extraction_prompt(text)
+        prompt = build_extraction_prompt(text)
         result = await self.glm.extract_json(prompt)
 
         return result
