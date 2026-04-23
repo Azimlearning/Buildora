@@ -15,6 +15,8 @@ from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 import operator
 from backend.agents.agent_a.agent import AgentA
+from backend.agents.agent_c.agent import AgentC
+from backend.agents.agent_e.agent import AgentE
 from backend.core.glm_client import GLMClient
 from backend.core.firebase_client import FirebaseClient
 from backend.core.storage import FirebaseStorage
@@ -87,26 +89,50 @@ def agent_b_node(state: BuildoraState) -> BuildoraState:
 
 def agent_e_node(state: BuildoraState) -> BuildoraState:
     """
-    Agent E: Alerts/Reminders
-    - Send Telegram notifications for critical alerts
-    - Schedule reminders for upcoming milestones
+    Agent E: Output Generation
+    - Generate PDF project report
+    - Generate XLSX cost tracker
+    - Generate compliance summary
+    - Upload reports to Firebase Storage
     """
-    print("[Agent E] Processing alerts and sending notifications...")
+    import asyncio
 
-    # Placeholder - to be implemented
-    # This agent handles Telegram bot integration
-    state["notifications_sent"] = len(state.get("alerts", []))
+    print("[Agent E] Generating reports...")
+
+    try:
+        # Initialize clients
+        firestore_client = FirebaseClient()
+        storage_client = FirebaseStorage()
+
+        # Initialize Agent E
+        agent_e = AgentE(
+            firestore_client=firestore_client,
+            storage_client=storage_client
+        )
+
+        # Generate reports
+        result = asyncio.run(agent_e.generate_reports(
+            project_id=state["project_id"],
+            report_types=["pdf", "xlsx"]  # Can add "compliance" if needed
+        ))
+
+        state["reports"] = result.get("reports", {})
+
+        # Count errors
+        errors = result.get("errors", [])
+        if errors:
+            state["errors"].extend(errors)
+            print(f"[Agent E] Generated reports with {len(errors)} errors")
+        else:
+            print(f"[Agent E] Successfully generated {len(state['reports'])} reports")
+
+    except Exception as e:
+        error_msg = f"Agent E error: {str(e)}"
+        print(f"[Agent E] {error_msg}")
+        state["errors"].append(error_msg)
+        state["reports"] = {}
 
     return state
-
-
-def should_run_agent_c(state: BuildoraState) -> str:
-    """
-    Conditional edge: Only run Agent C if compliance check is needed
-    """
-    # TODO: Add logic to determine if compliance check is needed
-    # For now, always run it
-    return "agent_c"
 
 
 def agent_c_node(state: BuildoraState) -> BuildoraState:
@@ -114,34 +140,44 @@ def agent_c_node(state: BuildoraState) -> BuildoraState:
     Agent C: Permits/Compliance
     - Score against CIDB BISQ checklist
     - Detect compliance gaps
+    - Validate contractor licenses
+    - Pre-fill ePermit forms
     """
-    # TODO: Implement Agent C logic
+    import asyncio
+
     print("[Agent C] Running compliance check...")
 
-    # Placeholder
-    state["compliance_score"] = {
-        "score": 85,
-        "status": "pass",
-        "gaps": []
-    }
+    try:
+        # Initialize clients
+        glm_client = GLMClient()
+        firestore_client = FirebaseClient()
 
-    return state
+        # Initialize Agent C
+        agent_c = AgentC(
+            glm_client=glm_client,
+            firestore_client=firestore_client,
+            pass_threshold=80
+        )
 
+        # Run compliance check
+        result = asyncio.run(agent_c.run_compliance_check(
+            project_id=state["project_id"],
+            stage="P2-KM",  # Default stage, can be made dynamic
+            permit_types=["excavation", "road_closure"]  # Common permit types
+        ))
 
-def agent_d_node(state: BuildoraState) -> BuildoraState:
-    """
-    Agent D: Reports
-    - Generate branded PDF report
-    - Generate XLSX cost tracker
-    """
-    # TODO: Implement Agent D logic
-    print("[Agent D] Generating reports...")
+        state["compliance_score"] = result
+        print(f"[Agent C] Compliance score: {result.get('score', 0):.1f}% ({result.get('status', 'unknown')})")
 
-    # Placeholder
-    state["reports"] = {
-        "pdf_url": "/reports/sample.pdf",
-        "xlsx_url": "/reports/sample.xlsx"
-    }
+    except Exception as e:
+        error_msg = f"Agent C error: {str(e)}"
+        print(f"[Agent C] {error_msg}")
+        state["errors"].append(error_msg)
+        state["compliance_score"] = {
+            "score": 0,
+            "status": "error",
+            "gaps": []
+        }
 
     return state
 
@@ -150,7 +186,8 @@ def create_buildora_graph() -> StateGraph:
     """
     Create the LangGraph workflow
 
-    Flow: Agent A → Agent B → Agent E → Agent C (conditional) → Agent D
+    Flow: Agent A → Agent B → Agent C → Agent E
+    (Agent D - Telegram notifications - is skipped for now)
     """
     workflow = StateGraph(BuildoraState)
 
@@ -158,26 +195,14 @@ def create_buildora_graph() -> StateGraph:
     workflow.add_node("agent_a", agent_a_node)
     workflow.add_node("agent_b", agent_b_node)
     workflow.add_node("agent_c", agent_c_node)
-    workflow.add_node("agent_d", agent_d_node)
     workflow.add_node("agent_e", agent_e_node)
 
-    # Define edges
+    # Define edges - linear flow
     workflow.set_entry_point("agent_a")
     workflow.add_edge("agent_a", "agent_b")
-    workflow.add_edge("agent_b", "agent_e")
-
-    # Conditional edge for Agent C
-    workflow.add_conditional_edges(
-        "agent_e",
-        should_run_agent_c,
-        {
-            "agent_c": "agent_c",
-            "skip": "agent_d"
-        }
-    )
-
-    workflow.add_edge("agent_c", "agent_d")
-    workflow.add_edge("agent_d", END)
+    workflow.add_edge("agent_b", "agent_c")
+    workflow.add_edge("agent_c", "agent_e")
+    workflow.add_edge("agent_e", END)
 
     return workflow.compile()
 
