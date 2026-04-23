@@ -20,8 +20,9 @@ class FirestoreClient:
 
     def __init__(self):
         self.settings = get_settings()
+        self.is_mock = False
+        self.mock_db = {"projects": {}, "documents": {}, "extracted_fields": {}, "alerts": {}, "reports": {}}
         self._initialize_firebase()
-        self.db = firestore.client()
 
     def _initialize_firebase(self):
         """Initialize Firebase Admin SDK if not already initialized"""
@@ -30,11 +31,20 @@ class FirestoreClient:
             if os.path.exists(cred_path):
                 cred = credentials.Certificate(cred_path)
                 firebase_admin.initialize_app(cred)
+                self.db = firestore.client()
             else:
                 if self.settings.DEBUG:
                     print(f"[Warning] Firebase credentials not found at {cred_path}")
                     print("[Warning] Running in mock mode for development")
-                    firebase_admin.initialize_app()
+                    self.is_mock = True
+                else:
+                    raise FileNotFoundError(f"Firebase credentials not found at {cred_path}")
+        else:
+            try:
+                self.db = firestore.client()
+            except Exception as e:
+                print(f"[Warning] Failed to get Firestore client: {e}")
+                self.is_mock = True
 
     # Project Operations
     async def create_project(self, project_data: Dict[str, Any]) -> str:
@@ -47,6 +57,15 @@ class FirestoreClient:
         Returns:
             Project ID
         """
+        import uuid
+        project_id = str(uuid.uuid4())
+        
+        if self.is_mock:
+            project_data['created_at'] = datetime.now()
+            project_data['updated_at'] = datetime.now()
+            self.mock_db["projects"][project_id] = project_data
+            return project_id
+
         project_data['created_at'] = firestore.SERVER_TIMESTAMP
         project_data['updated_at'] = firestore.SERVER_TIMESTAMP
 
@@ -56,6 +75,14 @@ class FirestoreClient:
 
     async def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
         """Get project by ID"""
+        if self.is_mock:
+            data = self.mock_db["projects"].get(project_id)
+            if data:
+                data_copy = data.copy()
+                data_copy['id'] = project_id
+                return data_copy
+            return None
+
         doc = self.db.collection('projects').document(project_id).get()
         if doc.exists:
             data = doc.to_dict()
@@ -65,12 +92,26 @@ class FirestoreClient:
 
     async def update_project(self, project_id: str, updates: Dict[str, Any]) -> bool:
         """Update project fields"""
+        if self.is_mock:
+            if project_id in self.mock_db["projects"]:
+                self.mock_db["projects"][project_id].update(updates)
+                self.mock_db["projects"][project_id]['updated_at'] = datetime.now()
+            return True
+
         updates['updated_at'] = firestore.SERVER_TIMESTAMP
         self.db.collection('projects').document(project_id).update(updates)
         return True
 
     async def list_projects(self, limit: int = 100) -> List[Dict[str, Any]]:
         """List all projects"""
+        if self.is_mock:
+            projects = []
+            for pid, data in list(self.mock_db["projects"].items())[:limit]:
+                data_copy = data.copy()
+                data_copy['id'] = pid
+                projects.append(data_copy)
+            return projects
+
         docs = self.db.collection('projects').limit(limit).stream()
         projects = []
         for doc in docs:
@@ -95,6 +136,15 @@ class FirestoreClient:
         Returns:
             Document ID
         """
+        import uuid
+        doc_id = str(uuid.uuid4())
+        
+        if self.is_mock:
+            document_data['project_id'] = project_id
+            document_data['uploaded_at'] = datetime.now()
+            self.mock_db["documents"][doc_id] = document_data
+            return doc_id
+
         document_data['project_id'] = project_id
         document_data['uploaded_at'] = firestore.SERVER_TIMESTAMP
 
@@ -104,6 +154,13 @@ class FirestoreClient:
 
     async def get_documents(self, project_id: str) -> List[Dict[str, Any]]:
         """Get all documents for a project"""
+        if self.is_mock:
+            return [
+                {**d, 'id': did} 
+                for did, d in self.mock_db["documents"].items() 
+                if d.get('project_id') == project_id
+            ]
+
         docs = self.db.collection('documents').where(
             'project_id', '==', project_id
         ).stream()
@@ -133,6 +190,19 @@ class FirestoreClient:
         Returns:
             Fields record ID
         """
+        import uuid
+        fields_id = str(uuid.uuid4())
+        
+        if self.is_mock:
+            data = {
+                'project_id': project_id,
+                'document_id': document_id,
+                'fields': fields,
+                'extracted_at': datetime.now()
+            }
+            self.mock_db["extracted_fields"][fields_id] = data
+            return fields_id
+
         data = {
             'project_id': project_id,
             'document_id': document_id,
@@ -149,6 +219,13 @@ class FirestoreClient:
         project_id: str
     ) -> List[Dict[str, Any]]:
         """Get all extracted fields for a project"""
+        if self.is_mock:
+            return [
+                {**d, 'id': did} 
+                for did, d in self.mock_db["extracted_fields"].items() 
+                if d.get('project_id') == project_id
+            ]
+
         docs = self.db.collection('extracted_fields').where(
             'project_id', '==', project_id
         ).stream()
@@ -176,6 +253,16 @@ class FirestoreClient:
         Returns:
             Alert ID
         """
+        import uuid
+        alert_id = str(uuid.uuid4())
+
+        if self.is_mock:
+            alert_data['project_id'] = project_id
+            alert_data['created_at'] = datetime.now()
+            alert_data['status'] = alert_data.get('status', 'active')
+            self.mock_db["alerts"][alert_id] = alert_data
+            return alert_id
+
         alert_data['project_id'] = project_id
         alert_data['created_at'] = firestore.SERVER_TIMESTAMP
         alert_data['status'] = alert_data.get('status', 'active')
@@ -190,6 +277,15 @@ class FirestoreClient:
         status: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Get alerts for a project, optionally filtered by status"""
+        if self.is_mock:
+            alerts = []
+            for did, d in self.mock_db["alerts"].items():
+                if d.get('project_id') == project_id:
+                    if status and d.get('status') != status:
+                        continue
+                    alerts.append({**d, 'id': did})
+            return alerts
+
         query = self.db.collection('alerts').where('project_id', '==', project_id)
 
         if status:
@@ -205,6 +301,12 @@ class FirestoreClient:
 
     async def update_alert_status(self, alert_id: str, status: str) -> bool:
         """Update alert status (active, resolved, dismissed)"""
+        if self.is_mock:
+            if alert_id in self.mock_db["alerts"]:
+                self.mock_db["alerts"][alert_id]['status'] = status
+                self.mock_db["alerts"][alert_id]['updated_at'] = datetime.now()
+            return True
+
         self.db.collection('alerts').document(alert_id).update({
             'status': status,
             'updated_at': firestore.SERVER_TIMESTAMP
@@ -227,6 +329,15 @@ class FirestoreClient:
         Returns:
             Report ID
         """
+        import uuid
+        report_id = str(uuid.uuid4())
+
+        if self.is_mock:
+            report_data['project_id'] = project_id
+            report_data['generated_at'] = datetime.now()
+            self.mock_db["reports"][report_id] = report_data
+            return report_id
+
         report_data['project_id'] = project_id
         report_data['generated_at'] = firestore.SERVER_TIMESTAMP
 
@@ -236,6 +347,13 @@ class FirestoreClient:
 
     async def get_reports(self, project_id: str) -> List[Dict[str, Any]]:
         """Get all reports for a project"""
+        if self.is_mock:
+            return [
+                {**d, 'id': did} 
+                for did, d in self.mock_db["reports"].items() 
+                if d.get('project_id') == project_id
+            ]
+
         docs = self.db.collection('reports').where(
             'project_id', '==', project_id
         ).stream()
