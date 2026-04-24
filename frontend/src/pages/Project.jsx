@@ -5,7 +5,7 @@ import AgentPanel from '../components/AgentPanel.jsx';
 import ComplianceScore from '../components/ComplianceScore.jsx';
 import ReportDownload from '../components/ReportDownload.jsx';
 import MilestoneForm from '../components/MilestoneForm.jsx';
-import { getProject } from '../api/client.js';
+import { getProject, getProjectAlerts, uploadDocuments } from '../api/client.js';
 import SourcesPanel from '../components/SourcesPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import UploadModal from '../components/UploadModal.jsx';
@@ -57,20 +57,14 @@ function BigHealthRing({ score }) {
   );
 }
 
-function OverviewTab({ project }) {
-  const alerts = [
-    { id: 1, type: 'urgent', text: 'Submit Q2 progress report by today to avoid penalty' },
-    { id: 2, type: 'warning', text: 'Payment of RM 45,000 due within this week' },
-    { id: 3, type: 'info', text: 'CIDB permit renewal required before 30 Apr' },
-  ];
-
+function OverviewTab({ project, alerts }) {
   return (
     <div className="space-y-6 animate-slide-up pb-8">
       <div className="card p-6">
         <h3 className="font-semibold text-lg text-[#1c1b18] mb-3 font-outfit">Project Overview</h3>
         <p className="text-[#6b6860] leading-relaxed max-w-3xl">{project.description}</p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card p-6 flex flex-col items-center justify-center text-center">
           <h3 className="font-semibold text-sm text-[#1c1b18] w-full text-left mb-6 uppercase tracking-wider">Health</h3>
@@ -83,14 +77,18 @@ function OverviewTab({ project }) {
         <div className="card p-6">
           <h3 className="font-semibold text-sm text-[#1c1b18] mb-6 uppercase tracking-wider">Alerts</h3>
           <div className="space-y-3">
-            {alerts.map(a => (
-              <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-[#e4e2dc] bg-[#fafaf8]">
-                {a.type === 'urgent' && <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
-                {a.type === 'warning' && <BellRing className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />}
-                {a.type === 'info' && <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />}
-                <p className="text-sm text-[#1c1b18] font-medium leading-snug">{a.text}</p>
-              </div>
-            ))}
+            {alerts && alerts.length > 0 ? (
+              alerts.map(a => (
+                <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-[#e4e2dc] bg-[#fafaf8]">
+                  {a.type === 'urgent' && <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
+                  {a.type === 'warning' && <BellRing className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />}
+                  {a.type === 'info' && <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />}
+                  <p className="text-sm text-[#1c1b18] font-medium leading-snug">{a.text}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[#6b6860] text-center py-4">No alerts at this time</p>
+            )}
           </div>
         </div>
       </div>
@@ -101,43 +99,73 @@ function OverviewTab({ project }) {
 export default function Project() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
+  const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
 
   // Panels collapse state
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  
-  // Sources & Chat Context State
-  const [sources, setSources] = useState([
-    { id: '1', name: 'contract_phase2.pdf', type: 'document' },
-    { id: '2', name: 'site_plan_A.jpg', type: 'image' },
-    { id: '3', name: 'BOQ_final.docx', type: 'document' }
-  ]);
-  const [selectedSources, setSelectedSources] = useState(['1', '2']);
-  
+
+  // Sources & Chat Context State — loaded from sessionStorage after upload
+  const [sources, setSources] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem(`sources_${id}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [selectedSources, setSelectedSources] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem(`sources_${id}`);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return parsed.map(s => s.id);
+    } catch { return []; }
+  });
+
+  // Job ID for SSE pipeline streaming
+  const [jobId] = useState(() => sessionStorage.getItem(`job_${id}`) || null);
+
   // Upload Modal State
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    getProject(id)
-      .then((data) => { setProject(data); setLoading(false); })
-      .catch((err) => { 
+
+    // Fetch project and alerts in parallel
+    Promise.all([
+      getProject(id),
+      getProjectAlerts(id).catch(() => ({ alerts: [] })) // Fallback to empty alerts on error
+    ])
+      .then(([projectData, alertsData]) => {
+        setProject(projectData);
+        setAlerts(alertsData.alerts || []);
+        setLoading(false);
+      })
+      .catch((err) => {
         console.error(err);
-        setLoading(false); 
+        setLoading(false);
       });
   }, [id]);
 
-  const handleUploadContinue = (newFiles) => {
+  const handleUploadContinue = async (newFiles) => {
     const newSources = newFiles.map((f, i) => ({
       id: `new-${Date.now()}-${i}`,
       name: f.name,
       type: (f.type || '').startsWith('image') ? 'image' : 'document'
     }));
-    setSources(prev => [...prev, ...newSources]);
+    setSources(prev => {
+      const merged = [...prev, ...newSources];
+      sessionStorage.setItem(`sources_${id}`, JSON.stringify(merged));
+      return merged;
+    });
     setSelectedSources(prev => [...prev, ...newSources.map(s => s.id)]);
     setUploadModalOpen(false);
+    // Fire upload to backend for added documents (non-blocking)
+    try {
+      await uploadDocuments(newFiles, id);
+    } catch (e) {
+      console.warn('[Buildora] Background upload failed:', e.message);
+    }
   };
 
   if (loading) return <SkeletonProject />;
@@ -208,10 +236,10 @@ export default function Project() {
 
           {/* Center Content */}
           <div className="p-10 max-w-4xl mx-auto w-full">
-            {activeTab === 'Overview' && <OverviewTab project={project} />}
+            {activeTab === 'Overview' && <OverviewTab project={project} alerts={alerts} />}
             {activeTab === 'Agents' && (
               <div className="space-y-6 pb-8 animate-slide-up">
-                <AgentPanel jobId={id} demoMode={false} />
+                <AgentPanel jobId={jobId} demoMode={!jobId} autoStart={!jobId} />
                 <div className="card p-6">
                   <h3 className="font-semibold text-lg text-[#1c1b18] mb-4 font-outfit">Submit Milestone Update</h3>
                   <MilestoneForm projectId={id} />

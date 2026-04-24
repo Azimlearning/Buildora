@@ -28,6 +28,12 @@ from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime
 
+from backend.agents.contracts import (
+    AgentEInput,
+    AgentEOutput,
+    ReportMetadata,
+    ProcessingStatus,
+)
 from backend.agents.agent_e.pdf_generator import ReportGenerator
 from backend.agents.agent_e.excel_generator import ExcelGenerator
 from backend.core.firebase_client import FirestoreClient

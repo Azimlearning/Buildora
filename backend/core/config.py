@@ -13,10 +13,11 @@ from typing import Optional
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
 
-    # AI / LLM Configuration
+    # AI / LLM Configuration (Z.AI)
+    # 5 million credits available for competition
     GLM_API_KEY: str = "PLACEHOLDER_GLM_API_KEY_NOT_PROVIDED_YET"
-    GLM_API_URL: str = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-    GLM_MODEL: str = "glm-4-flash"
+    GLM_API_URL: str = "https://api.z.ai/api/paas/v4/chat/completions"
+    GLM_MODEL: str = "glm-5"  # Strong performance for document processing
 
     # Firebase Configuration
     FIREBASE_PROJECT_ID: str = "buildora-dev"

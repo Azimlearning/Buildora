@@ -25,6 +25,14 @@ from typing import Dict, List, Any, Optional
 import json
 import logging
 
+from backend.agents.contracts import (
+    AgentCInput,
+    AgentCOutput,
+    ComplianceGap,
+    ContractorValidation,
+    ProcessingStatus,
+    ComplianceStatus,
+)
 from backend.agents.agent_c.compliance import (
     ComplianceEngine,
     ComplianceResult,
@@ -139,7 +147,7 @@ class AgentC:
         logger.info(f"[Agent C] Project type '{project_type}' → Borang {borang.value}")
 
         # ── Step 3: Collect submitted document names ─────────
-        submitted_docs = self._collect_document_names(extracted_fields)
+        submitted_docs = self._collect_document_names(extracted_fields, project=project)
 
         # ── Step 4: Rule-based compliance scoring ────────────
         result = self.engine.score_documents(submitted_docs, stage=stage)
@@ -231,10 +239,21 @@ class AgentC:
         return merged
 
     def _collect_document_names(
-        self, extracted_list: List[Dict[str, Any]]
+        self, extracted_list: List[Dict[str, Any]], project: Optional[Dict[str, Any]] = None
     ) -> List[str]:
         """Build a list of document description strings for matching."""
         names = []
+
+        # Include document filenames from project metadata
+        if project:
+            for doc in project.get("documents", []):
+                fname = doc.get("filename", "")
+                if fname:
+                    names.append(fname)
+                    # Also add the stem (without number prefix and extension)
+                    stem = fname.lower().rsplit(".", 1)[0]  # strip extension
+                    names.append(stem)
+
         for entry in extracted_list:
             fields = entry.get("fields", {})
             # Use document filename as a signal
@@ -242,10 +261,17 @@ class AgentC:
                 names.append(entry["filename"])
             # Also include any extracted doc-type labels
             if isinstance(fields, dict):
-                for key in ("document_type", "form_type", "report_type", "title"):
+                for key in ("document_type", "form_type", "report_type", "title", "scope"):
                     val = fields.get(key)
                     if val:
                         names.append(str(val))
+                # Include heuristic-found document keywords
+                for kw in fields.get("documents_found", []):
+                    names.append(str(kw))
+                # Include scope description for keyword matching
+                scope = fields.get("scope", "")
+                if scope:
+                    names.append(scope)
         return names
 
     def _parse_value(self, val) -> float:

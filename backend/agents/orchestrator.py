@@ -11,27 +11,29 @@ This is the main orchestration layer that coordinates:
 Author: Chip/Azim
 """
 
-from typing import TypedDict, Annotated
+from typing import Annotated
 from langgraph.graph import StateGraph, END
 import operator
+import asyncio
+import concurrent.futures
+from backend.agents.contracts import BuildoraState
 from backend.agents.agent_a.agent import AgentA
 from backend.agents.agent_c.agent import AgentC
 from backend.agents.agent_e.agent import AgentE
-from backend.core.glm_client import GLMClient
-from backend.core.firebase_client import FirestoreClient
+from backend.core.glm_client import get_glm_client
+from backend.core.firebase_client import get_firestore_client
 from backend.core.storage import FirebaseStorageClient
 
 
-class BuildoraState(TypedDict):
-    """Shared state across all agents"""
-    project_id: str
-    documents: list[dict]  # Uploaded files
-    extracted_fields: dict  # Agent A output
-    alerts: list[dict]  # Agent B output
-    compliance_score: dict  # Agent C output
-    reports: dict  # Agent D output
-    notifications_sent: int  # Agent E output
-    errors: Annotated[list[str], operator.add]  # Accumulated errors
+def _run_async(coro):
+    """
+    Safely run an async coroutine from a sync context, even when called
+    inside an already-running event loop (e.g. LangGraph ainvoke nodes).
+    Uses a fresh event loop in a background thread to avoid 'loop already running'.
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(asyncio.run, coro)
+        return future.result()
 
 
 def agent_a_node(state: BuildoraState) -> BuildoraState:
@@ -41,21 +43,19 @@ def agent_a_node(state: BuildoraState) -> BuildoraState:
     - Extract fields via Z.AI GLM
     - Store docs in Firebase Storage
     """
-    import asyncio
-
     print(f"[Agent A] Processing {len(state.get('documents', []))} documents...")
 
     try:
-        # Initialize clients
-        glm_client = GLMClient()
+        # Use singleton clients so data is shared across agent nodes
+        glm_client = get_glm_client()
         storage_client = FirebaseStorageClient()
-        firestore_client = FirestoreClient()
+        firestore_client = get_firestore_client()
 
         # Initialize Agent A
         agent_a = AgentA(glm_client, storage_client, firestore_client)
 
         # Process documents
-        result = asyncio.run(agent_a.process_documents(
+        result = _run_async(agent_a.process_documents(
             project_id=state["project_id"],
             documents=state["documents"]
         ))
@@ -95,13 +95,11 @@ def agent_e_node(state: BuildoraState) -> BuildoraState:
     - Generate compliance summary
     - Upload reports to Firebase Storage
     """
-    import asyncio
-
     print("[Agent E] Generating reports...")
 
     try:
-        # Initialize clients
-        firestore_client = FirestoreClient()
+        # Use singleton clients
+        firestore_client = get_firestore_client()
         storage_client = FirebaseStorageClient()
 
         # Initialize Agent E
@@ -111,9 +109,9 @@ def agent_e_node(state: BuildoraState) -> BuildoraState:
         )
 
         # Generate reports
-        result = asyncio.run(agent_e.generate_reports(
+        result = _run_async(agent_e.generate_reports(
             project_id=state["project_id"],
-            report_types=["pdf", "xlsx"]  # Can add "compliance" if needed
+            report_types=["pdf", "xlsx"]
         ))
 
         state["reports"] = result.get("reports", {})
@@ -143,14 +141,12 @@ def agent_c_node(state: BuildoraState) -> BuildoraState:
     - Validate contractor licenses
     - Pre-fill ePermit forms
     """
-    import asyncio
-
     print("[Agent C] Running compliance check...")
 
     try:
-        # Initialize clients
-        glm_client = GLMClient()
-        firestore_client = FirestoreClient()
+        # Use singleton clients so Agent C reads data saved by Agent A
+        glm_client = get_glm_client()
+        firestore_client = get_firestore_client()
 
         # Initialize Agent C
         agent_c = AgentC(
@@ -160,10 +156,10 @@ def agent_c_node(state: BuildoraState) -> BuildoraState:
         )
 
         # Run compliance check
-        result = asyncio.run(agent_c.run_compliance_check(
+        result = _run_async(agent_c.run_compliance_check(
             project_id=state["project_id"],
-            stage="P2-KM",  # Default stage, can be made dynamic
-            permit_types=["excavation", "road_closure"]  # Common permit types
+            stage="P2-KM",
+            permit_types=["excavation", "road_closure"]
         ))
 
         state["compliance_score"] = result

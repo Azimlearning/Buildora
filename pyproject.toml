@@ -50,9 +50,6 @@ asyncio_mode = "auto"
 addopts = [
     "--verbose",
     "--strict-markers",
-    "--cov=backend",
-    "--cov-report=html",
-    "--cov-report=term-missing",
 ]
 
 [tool.black]

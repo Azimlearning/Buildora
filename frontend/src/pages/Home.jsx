@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects } from '../api/client.js';
-import { Plus, MoreVertical, Building2, HardHat, Hammer, Construction, Activity } from 'lucide-react';
+import { getProjects, uploadDocuments } from '../api/client.js';
+import { Plus, MoreVertical, Building2, HardHat, Hammer, Construction, Activity, Loader2 } from 'lucide-react';
 import UploadModal from '../components/UploadModal.jsx';
 
 const CARD_COLORS = ['#1a2a1a', '#1a1a2a', '#2a1a10', '#1a2520', '#251a10'];
@@ -47,6 +47,8 @@ export default function Home() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
 
@@ -63,15 +65,28 @@ export default function Home() {
   ).sort((a, b) => {
     if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
     if (sortBy === 'health') return (b.health_score || 0) - (a.health_score || 0);
-    return 0; // 'recent' doesn't change initial array order (which is mocked as recent)
+    return 0;
   });
 
-  const handleCreateProject = (files) => {
-    // In a real app, we'd POST these to create a project.
-    // For the hackathon demo, just navigate to the kl-tower demo project
-    // or simulate creation. We will navigate to 'kl-tower'.
-    setIsModalOpen(false);
-    navigate('/project/kl-tower');
+  const handleCreateProject = async (files, projectTitle) => {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const result = await uploadDocuments(files, null, projectTitle || 'New Project');
+      const { project_id, job_id } = result;
+      // Store job_id so Project page can connect to SSE stream
+      if (job_id) sessionStorage.setItem(`job_${project_id}`, job_id);
+      // Store uploaded file names for sources panel
+      sessionStorage.setItem(`sources_${project_id}`, JSON.stringify(
+        files.map(f => ({ id: f.name, name: f.name, type: f.type?.startsWith('image') ? 'image' : 'document' }))
+      ));
+      setIsModalOpen(false);
+      navigate(`/project/${project_id}`);
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed. Please try again.');
+      setUploading(false);
+    }
   };
 
   if (loading) {
@@ -183,9 +198,11 @@ export default function Home() {
 
       <UploadModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { if (!uploading) { setIsModalOpen(false); setUploadError(null); } }}
         onContinue={handleCreateProject}
         projectName={null}
+        uploading={uploading}
+        error={uploadError}
       />
     </div>
   );

@@ -21,7 +21,14 @@
       "Bash(find . -maxdepth 3 -type f -name *.py -o -name *.md -o -name *.yml -o -name *.toml)",
       "Read(//tmp/**)",
       "Bash(npm install:*)",
-      "Bash(./install.sh --profile full)"
+      "Bash(./install.sh --profile full)",
+      "Bash(python -m py_compile agents/orchestrator.py)",
+      "Bash(python -m py_compile agents/agent_a/agent.py)",
+      "Bash(git ls-tree *)",
+      "Bash(~/.claude/skills/gstack/bin/gstack-config set:*)",
+      "Bash(touch ~/.gstack/.telemetry-prompted)",
+      "Bash(touch ~/.gstack/.proactive-prompted)",
+      "Bash(CLAUDE.md:*)"
     ]
   }
 }

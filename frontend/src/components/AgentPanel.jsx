@@ -93,6 +93,24 @@ const AGENTS = [
     demoFile: 'report_output.pdf',
     demoDuration: 2000,
   },
+  {
+    id: 'e',
+    label: 'Agent E',
+    role: 'Notifications & Alerts',
+    color: '#7c3aed',
+    bgSoft: 'rgba(124,58,237,0.10)',
+    demoLogs: [
+      'Reading compliance results from Agent C…',
+      'Score below threshold — composing alert…',
+      'Preparing Telegram notification…',
+      'Alert: Structural PE Endorsement missing ⚠',
+      'Alert: BOMBA clearance pending ⚠',
+      'Sending notification to project manager…',
+      '✓ Alerts dispatched successfully',
+    ],
+    demoFile: 'alerts_output.json',
+    demoDuration: 1200,
+  },
 ];
 
 /* ─── Status badge ─── */
@@ -251,7 +269,7 @@ export default function AgentPanel({ jobId, demoMode = false, autoStart = false 
   const [agentStates, setAgentStates] = useState(() =>
     Object.fromEntries(AGENTS.map((a) => [a.id, initState()]))
   );
-  const [expanded, setExpanded] = useState({ a: true, b: false, c: false, d: false });
+  const [expanded, setExpanded] = useState({ a: true, b: false, c: false, d: false, e: false });
   const [started, setStarted] = useState(false);
   const timersRef = useRef([]);
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, X, Search, FileImage, Link as LinkIcon, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, X, Search, FileImage, Link as LinkIcon, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 
 const ACCEPTED_TYPES = [
   { ext: 'PDF',  mime: 'application/pdf' },
@@ -15,7 +15,7 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function UploadModal({ isOpen, onClose, onContinue, projectName }) {
+export default function UploadModal({ isOpen, onClose, onContinue, projectName, uploading = false, error = null }) {
   const [files, setFiles] = useState([]);
   const [projectTitle, setProjectTitle] = useState('');
   const [isHover, setIsHover] = useState(false);
@@ -172,13 +172,19 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName }
             Upload More
           </button>
           
+          {error && (
+            <p className="text-sm text-red-400 text-center px-2">{error}</p>
+          )}
           <button 
             onClick={handleContinue}
-            disabled={files.length === 0 || (!projectName && !projectTitle.trim())}
+            disabled={uploading || files.length === 0 || (!projectName && !projectTitle.trim())}
             className="bg-[#f97316] hover:bg-[#ea580c] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
           >
-            Continue Session
-            <ArrowRight className="w-4 h-4" />
+            {uploading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" />Uploading…</>
+            ) : (
+              <>Continue Session<ArrowRight className="w-4 h-4" /></>
+            )}
           </button>
         </div>
       </div>

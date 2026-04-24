@@ -84,10 +84,35 @@ async function request(path, options = {}) {
 }
 
 /**
- * Upload a construction document.
- * POST /upload
- * @param {FormData} formData - Multipart form with the document file
- * @returns {Promise<{ project_id: string, filename: string }>}
+ * Upload construction documents and trigger AI orchestration.
+ * POST /api/upload
+ * @param {File[]} files - Array of files to upload
+ * @param {string|null} projectId - Existing project ID (null for new project)
+ * @param {string|null} projectTitle - New project title (required if projectId is null)
+ * @returns {Promise<{ status: string, project_id: string, job_id: string, files: Array }>}
+ */
+export const uploadDocuments = async (files, projectId = null, projectTitle = null) => {
+  const formData = new FormData();
+  files.forEach(f => formData.append('files', f));
+  if (projectId) formData.append('project_id', projectId);
+  if (projectTitle) formData.append('project_title', projectTitle);
+
+  const res = await fetch(`${BASE}/api/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail ?? 'Upload failed');
+  }
+
+  return res.json();
+};
+
+/**
+ * Legacy upload function - kept for backward compatibility.
+ * @deprecated Use uploadDocuments instead
  */
 export const uploadDocument = (formData) =>
   fetch(`${BASE}/upload`, { method: 'POST', body: formData }).then((res) => {
@@ -100,7 +125,7 @@ export const uploadDocument = (formData) =>
  * GET /projects
  * @returns {Promise<Project[]>}
  */
-export const getProjects = () => request('/projects').catch(() => DEMO_PROJECTS);
+export const getProjects = () => request('/api/projects').catch(() => DEMO_PROJECTS);
 
 /**
  * Create a new project.
@@ -109,7 +134,7 @@ export const getProjects = () => request('/projects').catch(() => DEMO_PROJECTS)
  * @returns {Promise<Project>}
  */
 export const createProject = (data) =>
-  request('/projects', { method: 'POST', body: JSON.stringify(data) });
+  request('/api/projects', { method: 'POST', body: JSON.stringify(data) });
 
 /**
  * Get a single project by ID.
@@ -117,7 +142,7 @@ export const createProject = (data) =>
  * @param {string} id - Project ID
  * @returns {Promise<Project>}
  */
-export const getProject = (id) => request(`/projects/${id}`).catch(() => {
+export const getProject = (id) => request(`/api/projects/${id}`).catch(() => {
   const proj = DEMO_PROJECTS.find(p => p.id === id);
   if (!proj) throw new Error('Project not found');
   return proj;
@@ -130,7 +155,7 @@ export const getProject = (id) => request(`/projects/${id}`).catch(() => {
  * @returns {Promise<Milestone>}
  */
 export const postMilestone = (data) =>
-  request('/milestones', { method: 'POST', body: JSON.stringify(data) });
+  request('/api/milestones', { method: 'POST', body: JSON.stringify(data) });
 
 /**
  * Get milestones for a project.
@@ -138,7 +163,7 @@ export const postMilestone = (data) =>
  * @param {string} projectId
  * @returns {Promise<Milestone[]>}
  */
-export const getMilestones = (projectId) => request(`/milestones/${projectId}`);
+export const getMilestones = (projectId) => request(`/api/milestones/${projectId}`);
 
 /**
  * Fetch the generated report for a project.
@@ -146,7 +171,7 @@ export const getMilestones = (projectId) => request(`/milestones/${projectId}`);
  * @param {string} id - Project ID
  * @returns {Promise<Report>}
  */
-export const getReport = (id) => request(`/reports/${id}`);
+export const getReport = (id) => request(`/api/reports/${id}`);
 
 /**
  * Trigger report generation for a project.
@@ -155,7 +180,7 @@ export const getReport = (id) => request(`/reports/${id}`);
  * @returns {Promise<{ status: string }>}
  */
 export const generateReport = (id) =>
-  request(`/reports/${id}/generate`, { method: 'POST' });
+  request(`/api/reports/${id}/generate`, { method: 'POST' });
 
 /**
  * Get compliance score for a project.
@@ -163,7 +188,7 @@ export const generateReport = (id) =>
  * @param {string} id - Project ID
  * @returns {Promise<ComplianceResult>}
  */
-export const getComplianceScore = (id) => request(`/compliance/${id}`);
+export const getComplianceScore = (id) => request(`/api/compliance/${id}`);
 
 /**
  * Returns the full SSE URL for agent streaming.
@@ -172,4 +197,12 @@ export const getComplianceScore = (id) => request(`/compliance/${id}`);
  * @param {string} jobId
  * @returns {string} SSE URL
  */
-export const getAgentStreamUrl = (jobId) => `${BASE}/agent-stream/${jobId}`;
+export const getAgentStreamUrl = (jobId) => `${BASE}/api/agent-stream/${jobId}`;
+
+/**
+ * Get dynamic alerts for a project.
+ * GET /api/projects/:id/alerts
+ * @param {string} projectId - Project ID
+ * @returns {Promise<{ alerts: Array<{ id: number, type: string, text: string }> }>}
+ */
+export const getProjectAlerts = (projectId) => request(`/api/projects/${projectId}/alerts`);

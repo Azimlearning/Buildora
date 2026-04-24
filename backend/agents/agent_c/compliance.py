@@ -461,22 +461,75 @@ class ComplianceEngine:
         # Default: master KM checklist
         return DBKL_MASTER_CHECKLIST
 
+    # Keyword groups for filename-based matching
+    # Maps checklist item IDs to filename keywords that strongly imply that document.
+    _FILENAME_SIGNALS: Dict[str, List[str]] = {
+        "KM-01": ["cover", "letter", "surat", "iringan"],
+        "KM-02": ["title", "hakmilik", "tanah", "land"],
+        "KM-04": ["carian", "search", "etanah"],
+        "KM-05": ["cukai", "assessment", "tax", "receipt"],
+        "KM-09": ["carbon", "green", "rendah", "karbon"],
+        "KM-10": ["photo", "gambar", "tapak", "photograph"],
+        "KM-11": ["perspective", "perspektif", "lukisan"],
+        "KM-12": ["survey", "ukur", "contour", "kontur", "topograph"],
+        "KM-15": ["traffic", "tia", "transport"],
+        "KM-16": ["geotech", "geotechnic", "soil", "tanah", "investigation", "siasatan"],
+        "KM-17": ["feasibility", "kajian", "pasaran", "study"],
+        "KM-18": ["eia", "environment", "impact", "alam"],
+    }
+
+    # Common document-type keywords → which checklist IDs they satisfy
+    _KEYWORD_MAP: Dict[str, List[str]] = {
+        "permit": ["KM-01", "KM-06", "KM-07"],
+        "permits": ["KM-01", "KM-06", "KM-07"],
+        "profile": ["KM-02", "KM-04"],
+        "profiles": ["KM-02", "KM-04"],
+        "financial": ["KM-05", "KM-08", "KM-17"],
+        "finance": ["KM-05", "KM-08"],
+        "incident": ["KM-15", "KM-17"],
+        "incidents": ["KM-15", "KM-17"],
+        "contract": ["KM-01", "KM-03"],
+        "boq": ["KM-08", "KM-09"],
+        "plan": ["KM-11", "KM-12"],
+        "report": ["KM-15", "KM-16", "KM-17"],
+        "certificate": ["KM-02", "KM-04"],
+        "checklist": ["KM-09"],
+        "drawing": ["KM-11", "KM-13"],
+        "site": ["KM-10", "KM-12"],
+    }
+
+    def _infer_satisfied_ids_from_filenames(self, filenames: List[str]) -> set:
+        """Return a set of checklist IDs implied by uploaded filenames."""
+        satisfied_ids: set = set()
+        for fname in filenames:
+            # Use the stem (without extension), split on _ and -
+            stem = fname.lower().replace(".pdf", "").replace(".docx", "")
+            parts = [p for part in stem.split("_") for p in part.split("-") if len(p) > 2]
+            for part in parts:
+                if part in self._KEYWORD_MAP:
+                    satisfied_ids.update(self._KEYWORD_MAP[part])
+                # Also partial match
+                for kw, ids in self._KEYWORD_MAP.items():
+                    if kw in part or part in kw:
+                        satisfied_ids.update(ids)
+        return satisfied_ids
+
     def _fuzzy_match(self, item, docs_lower: List[str]) -> bool:
-        """Simple keyword match — checks if key words appear in any doc."""
+        """Keyword match — checks if key words appear in any doc string."""
         if isinstance(item, ChecklistItem):
             keywords_en = item.description_en.lower().split()
             keywords_ms = item.description_ms.lower().split()
-            # Need at least 2 keyword hits in any single doc
+            # Need at least 1 keyword hit in any single doc (was 2, relaxed for filenames)
             for doc in docs_lower:
-                en_hits = sum(1 for kw in keywords_en if kw in doc)
-                ms_hits = sum(1 for kw in keywords_ms if kw in doc)
-                if en_hits >= 2 or ms_hits >= 2:
+                en_hits = sum(1 for kw in keywords_en if len(kw) > 3 and kw in doc)
+                ms_hits = sum(1 for kw in keywords_ms if len(kw) > 3 and kw in doc)
+                if en_hits >= 1 or ms_hits >= 1:
                     return True
         else:
             # Plain string checklist item
-            keywords = item.lower().split()
+            keywords = [kw for kw in item.lower().split() if len(kw) > 3]
             for doc in docs_lower:
                 hits = sum(1 for kw in keywords if kw in doc)
-                if hits >= 2:
+                if hits >= 1:
                     return True
         return False
