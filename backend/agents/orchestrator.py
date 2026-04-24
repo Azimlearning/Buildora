@@ -5,8 +5,8 @@ This is the main orchestration layer that coordinates:
 - Agent A: Document Reader (PDF parsing & field extraction)
 - Agent B: Monitor (Delay & cost variance detection)
 - Agent C: Permits/Compliance (CIDB scoring)
-- Agent D: Reports (PDF & XLSX generation)
-- Agent E: Alerts/Reminders (Telegram notifications)
+- Agent D: Alerts/Reminders (Telegram notifications)
+- Agent E: Report Generator (PDF & XLSX generation)
 
 Author: Chip/Azim
 """
@@ -87,9 +87,25 @@ def agent_b_node(state: BuildoraState) -> BuildoraState:
     return state
 
 
+def agent_d_node(state: BuildoraState) -> BuildoraState:
+    """
+    Agent D: Alerts/Reminders
+    - Generate alerts based on compliance score
+    - Send Telegram notifications
+    - Track notification status
+    """
+    print("[Agent D] Generating alerts and notifications...")
+
+    # Placeholder - to be implemented
+    # This should check compliance_score and send alerts if score < 80
+    state["notifications_sent"] = 0
+
+    return state
+
+
 def agent_e_node(state: BuildoraState) -> BuildoraState:
     """
-    Agent E: Output Generation
+    Agent E: Report Generator
     - Generate PDF project report
     - Generate XLSX cost tracker
     - Generate compliance summary
@@ -182,8 +198,7 @@ def create_buildora_graph() -> StateGraph:
     """
     Create the LangGraph workflow
 
-    Flow: Agent A → Agent B → Agent C → Agent E
-    (Agent D - Telegram notifications - is skipped for now)
+    Flow: Agent A → Agent B → Agent C → Agent D → Agent E
     """
     workflow = StateGraph(BuildoraState)
 
@@ -191,13 +206,15 @@ def create_buildora_graph() -> StateGraph:
     workflow.add_node("agent_a", agent_a_node)
     workflow.add_node("agent_b", agent_b_node)
     workflow.add_node("agent_c", agent_c_node)
+    workflow.add_node("agent_d", agent_d_node)
     workflow.add_node("agent_e", agent_e_node)
 
     # Define edges - linear flow
     workflow.set_entry_point("agent_a")
     workflow.add_edge("agent_a", "agent_b")
     workflow.add_edge("agent_b", "agent_c")
-    workflow.add_edge("agent_c", "agent_e")
+    workflow.add_edge("agent_c", "agent_d")
+    workflow.add_edge("agent_d", "agent_e")
     workflow.add_edge("agent_e", END)
 
     return workflow.compile()

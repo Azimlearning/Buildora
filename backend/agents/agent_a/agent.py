@@ -122,6 +122,26 @@ class AgentA:
 
         processing_time_ms = int((time.time() - start_time) * 1000)
 
+        # Update project with extracted contractor info from first document
+        if all_extracted_fields and len(all_extracted_fields) > 0:
+            first_doc_fields = all_extracted_fields[0].get("fields", {})
+            contractor = first_doc_fields.get("contractor", "")
+            project_name = first_doc_fields.get("project_name", "")
+
+            # Update project with extracted metadata
+            update_data = {}
+            if contractor and contractor not in ["Unknown Contractor", ""]:
+                update_data["contractor"] = contractor
+            if project_name and project_name not in ["Unnamed Project", ""]:
+                update_data["project_name_extracted"] = project_name
+
+            if update_data:
+                try:
+                    await self.db.update_project(project_id, update_data)
+                    print(f"[Agent A] Updated project with: {update_data}")
+                except Exception as e:
+                    print(f"[Agent A] Failed to update project metadata: {e}")
+
         return AgentAOutput(
             project_id=project_id,
             status=ProcessingStatus.COMPLETED if documents_failed == 0 else ProcessingStatus.PARTIAL,
@@ -155,7 +175,7 @@ class AgentA:
             text: Raw text from PDF
 
         Returns:
-            Structured field dictionary with ≥10 fields
+            Structured field dictionary with ≥10 fields and a confidence score
         """
         prompt = build_extraction_prompt(text)
         result = await self.glm.extract_json(prompt)
@@ -163,6 +183,10 @@ class AgentA:
         # If GLM returned empty (fallback mode or 401), use heuristic extraction
         if not result or result.get("parse_error"):
             result = self._heuristic_extract(text)
+        else:
+            # Add confidence score for LLM extraction if not present
+            if "_confidence_score" not in result:
+                result["_confidence_score"] = 0.85  # High confidence for LLM
 
         return result
 
@@ -244,6 +268,7 @@ class AgentA:
             "project_type": find(r"(?:residential|commercial|industrial|mixed|education|public)", "general"),
             "documents_found": doc_keywords,
             "_extraction_method": "heuristic_fallback",
+            "_confidence_score": 0.40,  # Lower confidence for heuristic extraction
         }
 
     async def store_document(self, file_path: str, project_id: str) -> str:

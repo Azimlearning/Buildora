@@ -56,6 +56,16 @@ def extract_text_ocr(pdf_path: str) -> str:
         doc = fitz.open(pdf_path)
         text = ""
 
+        # Try eng+msa first, fallback to eng if msa is missing
+        ocr_lang = "eng+msa"
+        try:
+            # Quick test to see if msa is available
+            pytesseract.get_languages()
+            if "msa" not in pytesseract.get_languages():
+                ocr_lang = "eng"
+        except Exception:
+            ocr_lang = "eng"
+
         for page_num in range(len(doc)):
             page = doc[page_num]
 
@@ -65,7 +75,12 @@ def extract_text_ocr(pdf_path: str) -> str:
             img = Image.open(io.BytesIO(img_data))
 
             # Run OCR
-            page_text = pytesseract.image_to_string(img, lang="eng")
+            try:
+                page_text = pytesseract.image_to_string(img, lang=ocr_lang)
+            except pytesseract.TesseractError:
+                # If eng+msa failed, fallback to eng
+                page_text = pytesseract.image_to_string(img, lang="eng")
+                
             text += page_text + "\n"
 
         doc.close()

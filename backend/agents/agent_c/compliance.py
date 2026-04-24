@@ -263,6 +263,9 @@ class ComplianceResult:
     stage: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
+        # Group gaps by category for frontend display
+        categories = self._build_categories()
+
         return {
             "score": round(self.score, 1),
             "status": self.status,
@@ -274,7 +277,46 @@ class ComplianceResult:
             "prefilled_forms": self.prefilled_forms,
             "borang_type": self.borang_type,
             "stage": self.stage,
+            "categories": categories,
         }
+
+    def _build_categories(self) -> List[Dict[str, Any]]:
+        """Build category structure for frontend accordion display."""
+        # Map checklist items to categories
+        category_map = {
+            "Contractor Registration": ["KM-01", "KM-02", "KM-03"],
+            "Insurance & Bonds": ["KM-04", "KM-05", "KM-06"],
+            "Structural & Engineering": ["KM-16", "KM-17"],
+            "Safety & Permits": ["KM-07", "KM-20", "KM-21"],
+        }
+
+        categories = []
+        gap_ids = {g.get("id", "") for g in self.gaps}
+
+        for cat_name, item_ids in category_map.items():
+            items = []
+            for item_id in item_ids:
+                # Find the gap with this ID
+                gap = next((g for g in self.gaps if g.get("id") == item_id), None)
+                if gap:
+                    items.append({
+                        "label": gap.get("description_en", "Unknown"),
+                        "status": "fail" if item_id in gap_ids else "pass"
+                    })
+                else:
+                    # Item passed
+                    items.append({
+                        "label": f"Item {item_id}",
+                        "status": "pass"
+                    })
+
+            if items:
+                categories.append({
+                    "name": cat_name,
+                    "items": items
+                })
+
+        return categories
 
 
 # ─────────────────────────────────────────────────────────────
