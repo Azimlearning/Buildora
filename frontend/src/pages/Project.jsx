@@ -5,12 +5,13 @@ import AgentPanel from '../components/AgentPanel.jsx';
 import ComplianceScore from '../components/ComplianceScore.jsx';
 import ReportDownload from '../components/ReportDownload.jsx';
 import MilestoneForm from '../components/MilestoneForm.jsx';
+import NotificationsPanel from '../components/NotificationsPanel.jsx';
 import { getProject } from '../api/client.js';
 import SourcesPanel from '../components/SourcesPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import UploadModal from '../components/UploadModal.jsx';
 
-const TABS = ['Overview', 'Agents', 'Compliance', 'Reports'];
+const TABS = ['Overview', 'Alerts', 'Agents', 'Compliance', 'Reports'];
 
 function SkeletonProject() {
   return (
@@ -58,12 +59,6 @@ function BigHealthRing({ score }) {
 }
 
 function OverviewTab({ project }) {
-  const alerts = [
-    { id: 1, type: 'urgent', text: 'Submit Q2 progress report by today to avoid penalty' },
-    { id: 2, type: 'warning', text: 'Payment of RM 45,000 due within this week' },
-    { id: 3, type: 'info', text: 'CIDB permit renewal required before 30 Apr' },
-  ];
-
   return (
     <div className="space-y-6 animate-slide-up pb-8">
       <div className="card p-6">
@@ -80,19 +75,8 @@ function OverviewTab({ project }) {
           </p>
         </div>
 
-        <div className="card p-6">
-          <h3 className="font-semibold text-sm text-[#1c1b18] mb-6 uppercase tracking-wider">Alerts</h3>
-          <div className="space-y-3">
-            {alerts.map(a => (
-              <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-[#e4e2dc] bg-[#fafaf8]">
-                {a.type === 'urgent' && <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
-                {a.type === 'warning' && <BellRing className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />}
-                {a.type === 'info' && <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />}
-                <p className="text-sm text-[#1c1b18] font-medium leading-snug">{a.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Agent D — live notifications panel */}
+        <NotificationsPanel projectId={project.id} />
       </div>
     </div>
   );
@@ -209,6 +193,11 @@ export default function Project() {
           {/* Center Content */}
           <div className="p-10 max-w-4xl mx-auto w-full">
             {activeTab === 'Overview' && <OverviewTab project={project} />}
+            {activeTab === 'Alerts' && (
+              <div className="space-y-6 pb-8 animate-slide-up">
+                <NotificationsPanel projectId={id} />
+              </div>
+            )}
             {activeTab === 'Agents' && (
               <div className="space-y-6 pb-8 animate-slide-up">
                 <AgentPanel jobId={id} demoMode={false} />

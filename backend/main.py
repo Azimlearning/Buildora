@@ -47,3 +47,8 @@ async def health():
 # app.include_router(projects.router, prefix="/api", tags=["projects"])
 # app.include_router(milestones.router, prefix="/api", tags=["milestones"])
 # app.include_router(reports.router, prefix="/api", tags=["reports"])
+
+# Agent D: Notifications & Alerts
+from backend.api.notifications import router as notifications_router
+app.include_router(notifications_router)
+
