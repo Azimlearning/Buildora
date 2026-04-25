@@ -6,6 +6,8 @@ import ComplianceScore from '../components/ComplianceScore.jsx';
 import ReportDownload from '../components/ReportDownload.jsx';
 import MilestoneForm from '../components/MilestoneForm.jsx';
 import NotificationsPanel from '../components/NotificationsPanel.jsx';
+import MonitoringPanel from '../components/MonitoringPanel.jsx';
+import HealthScoreCard from '../components/HealthScoreCard.jsx';
 import { getProject, getProjectAlerts, uploadDocuments } from '../api/client.js';
 import SourcesPanel from '../components/SourcesPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
@@ -297,6 +299,13 @@ export default function Project() {
             {activeTab === 'Agents' && (
               <div className="space-y-6 pb-8 animate-slide-up">
                 <AgentPanel jobId={jobId} demoMode={!jobId} autoStart={!jobId} />
+
+                {/* Health Score Card */}
+                <HealthScoreCard projectId={id} />
+
+                {/* Monitoring Panel (Agent B) */}
+                <MonitoringPanel projectId={id} />
+
                 <div className="card p-6">
                   <h3 className="font-semibold text-lg text-[#1c1b18] mb-4 font-outfit">Submit Milestone Update</h3>
                   <MilestoneForm projectId={id} />
