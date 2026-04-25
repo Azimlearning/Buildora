@@ -5,12 +5,13 @@ import AgentPanel from '../components/AgentPanel.jsx';
 import ComplianceScore from '../components/ComplianceScore.jsx';
 import ReportDownload from '../components/ReportDownload.jsx';
 import MilestoneForm from '../components/MilestoneForm.jsx';
+import NotificationsPanel from '../components/NotificationsPanel.jsx';
 import { getProject, getProjectAlerts, uploadDocuments } from '../api/client.js';
 import SourcesPanel from '../components/SourcesPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import UploadModal from '../components/UploadModal.jsx';
 
-const TABS = ['Overview', 'Agents', 'Compliance', 'Reports'];
+const TABS = ['Overview', 'Alerts', 'Agents', 'Compliance', 'Reports'];
 
 function SkeletonProject() {
   return (
@@ -58,7 +59,7 @@ function BigHealthRing({ score }) {
 }
 
 function OverviewTab({ project, alerts }) {
-  const f = project; // shorthand
+  const f = project;
   const hasDetails = f.contractor || f.location || f.contract_value || f.cidb_grade || f.scope;
 
   return (
@@ -288,6 +289,11 @@ export default function Project() {
           {/* Center Content */}
           <div className="p-10 max-w-4xl mx-auto w-full">
             {activeTab === 'Overview' && <OverviewTab project={project} alerts={alerts} />}
+            {activeTab === 'Alerts' && (
+              <div className="space-y-6 pb-8 animate-slide-up">
+                <NotificationsPanel projectId={id} />
+              </div>
+            )}
             {activeTab === 'Agents' && (
               <div className="space-y-6 pb-8 animate-slide-up">
                 <AgentPanel jobId={jobId} demoMode={!jobId} autoStart={!jobId} />

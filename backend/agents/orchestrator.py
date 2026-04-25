@@ -20,6 +20,7 @@ from backend.agents.contracts import BuildoraState
 from backend.agents.agent_a.agent import AgentA
 from backend.agents.agent_b.agent import AgentB
 from backend.agents.agent_c.agent import AgentC
+from backend.agents.agent_d.agent import AgentD
 from backend.agents.agent_e.agent import AgentE
 from backend.core.glm_client import get_glm_client
 from backend.core.firebase_client import get_firestore_client
@@ -120,16 +121,46 @@ def agent_b_node(state: BuildoraState) -> BuildoraState:
 
 def agent_d_node(state: BuildoraState) -> BuildoraState:
     """
-    Agent D: Alerts/Reminders
-    - Generate alerts based on compliance score
-    - Send Telegram notifications
-    - Track notification status
+    Agent D: Notifications & Alerts
+    - Read alerts from Agent B
+    - Save notifications to Firestore (for the UI)
+    - Send batch summary to Telegram
     """
-    print("[Agent D] Generating alerts and notifications...")
+    print(f"[Agent D] Processing {len(state.get('alerts', []))} alerts...")
 
-    # Placeholder - to be implemented
-    # This should check compliance_score and send alerts if score < 80
-    state["notifications_sent"] = 0
+    try:
+        firestore_client = get_firestore_client()
+
+        # Initialize Agent D
+        agent_d = AgentD(
+            firestore_client=firestore_client,
+            use_demo_alerts=True
+        )
+
+        # Process alerts
+        result = _run_async(agent_d.process_alerts(
+            project_id=state["project_id"],
+            alerts=state.get("alerts", []),
+            project_name=state.get("project_name", ""),
+        ))
+
+        state["notifications_sent"] = result.get("total_alerts", 0)
+
+        # Merge any new errors
+        errors = result.get("errors", [])
+        if errors:
+            state["errors"].extend(errors)
+
+        print(
+            f"[Agent D] Dispatched {result['total_alerts']} notifications "
+            f"(Telegram={'✓' if result['telegram_sent'] else '✗'})"
+        )
+
+    except Exception as e:
+        error_msg = f"Agent D error: {str(e)}"
+        print(f"[Agent D] {error_msg}")
+        state["errors"].append(error_msg)
+        state["notifications_sent"] = 0
 
     return state
 
@@ -229,23 +260,24 @@ def create_buildora_graph() -> StateGraph:
     """
     Create the LangGraph workflow
 
-    Flow: Agent A → Agent B → Agent C → Agent D → Agent E
+    Flow: Agent A → Agent B → Agent D → Agent C → Agent E
+    Agent D dispatches alerts to Telegram + Firestore after Agent B detects them.
     """
     workflow = StateGraph(BuildoraState)
 
     # Add nodes
     workflow.add_node("agent_a", agent_a_node)
     workflow.add_node("agent_b", agent_b_node)
-    workflow.add_node("agent_c", agent_c_node)
     workflow.add_node("agent_d", agent_d_node)
+    workflow.add_node("agent_c", agent_c_node)
     workflow.add_node("agent_e", agent_e_node)
 
     # Define edges - linear flow
     workflow.set_entry_point("agent_a")
     workflow.add_edge("agent_a", "agent_b")
-    workflow.add_edge("agent_b", "agent_c")
-    workflow.add_edge("agent_c", "agent_d")
-    workflow.add_edge("agent_d", "agent_e")
+    workflow.add_edge("agent_b", "agent_d")
+    workflow.add_edge("agent_d", "agent_c")
+    workflow.add_edge("agent_c", "agent_e")
     workflow.add_edge("agent_e", END)
 
     return workflow.compile()

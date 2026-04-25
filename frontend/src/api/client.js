@@ -191,6 +191,27 @@ export const generateReport = (id) =>
 export const getComplianceScore = (id) => request(`/api/compliance/${id}`);
 
 /**
+ * Get notifications/alerts for a project (Agent D).
+ * GET /notifications/:id
+ * @param {string} id - Project ID
+ * @returns {Promise<{ project_id: string, count: number, notifications: Notification[] }>}
+ */
+export const getNotifications = (id) => request(`/notifications/${id}`).catch(() => ({
+  project_id: id,
+  count: 0,
+  notifications: [],
+}));
+
+/**
+ * Trigger Agent D to process alerts for a project.
+ * POST /notifications/:id
+ * @param {string} id - Project ID
+ * @returns {Promise<Object>}
+ */
+export const triggerNotifications = (id) =>
+  request(`/notifications/${id}`, { method: 'POST' });
+
+/**
  * Returns the full SSE URL for agent streaming.
  * Connect via EventSource in AgentPanel.
  * GET /agent-stream/:jobId
