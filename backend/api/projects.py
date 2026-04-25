@@ -28,12 +28,21 @@ def calculate_health_score(project: Dict[str, Any]) -> float:
     compliance_score = compliance.get("score", 0) if isinstance(compliance, dict) else 0
 
     # Schedule component (placeholder - needs milestone data)
-    # TODO: Calculate from milestones when Agent B is implemented
-    schedule_score = 100  # Default to 100 if no milestones yet
+    monitoring = project.get("monitoring_results", {})
+    delay_alerts = monitoring.get("delay_alerts", []) if isinstance(monitoring, dict) else []
+    if delay_alerts:
+        max_delay = max(alert.get("delay_days", 0) for alert in delay_alerts)
+        schedule_score = max(0, 100 - min(max_delay * 5, 100))
+    else:
+        schedule_score = 100
 
-    # Cost component (placeholder - needs budget data)
-    # TODO: Calculate from cost tracking when implemented
-    cost_score = 100  # Default to 100 if no cost tracking yet
+    # Cost component from Agent B variance output
+    cost_alerts = monitoring.get("cost_variance_alerts", []) if isinstance(monitoring, dict) else []
+    if cost_alerts:
+        max_variance = max(abs(alert.get("variance_percentage", 0)) for alert in cost_alerts)
+        cost_score = max(0, 100 - min(int(max_variance * 2), 100))
+    else:
+        cost_score = 100
 
     health = (
         schedule_score * 0.40 +
@@ -142,6 +151,7 @@ async def get_project_alerts(project_id: str):
     if isinstance(monitoring_results, dict):
         delay_alerts = monitoring_results.get("delay_alerts", [])
         cost_alerts = monitoring_results.get("cost_variance_alerts", [])
+        anomaly_alerts = monitoring_results.get("anomaly_alerts", [])
 
         for alert in delay_alerts[:2]:  # Show top 2 delay alerts
             alerts.append({
@@ -155,6 +165,13 @@ async def get_project_alerts(project_id: str):
                 "id": len(alerts) + 1,
                 "type": "warning",
                 "text": alert.get("impact_description", "Cost variance detected")
+            })
+
+        for alert in anomaly_alerts[:2]:
+            alerts.append({
+                "id": len(alerts) + 1,
+                "type": "urgent" if alert.get("severity") == "critical" else "warning",
+                "text": alert.get("impact_description", "Monitoring anomaly detected")
             })
 
     return {"alerts": alerts}

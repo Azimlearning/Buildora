@@ -18,6 +18,7 @@ import asyncio
 import concurrent.futures
 from backend.agents.contracts import BuildoraState
 from backend.agents.agent_a.agent import AgentA
+from backend.agents.agent_b.agent import AgentB
 from backend.agents.agent_c.agent import AgentC
 from backend.agents.agent_e.agent import AgentE
 from backend.core.glm_client import get_glm_client
@@ -81,8 +82,38 @@ def agent_b_node(state: BuildoraState) -> BuildoraState:
     """
     print("[Agent B] Checking for delays and cost variances...")
 
-    # Placeholder - to be implemented by Harry
-    state["alerts"] = []
+    try:
+        firestore_client = get_firestore_client()
+        agent_b = AgentB(firestore_client=firestore_client)
+
+        result = _run_async(agent_b.run_monitoring(
+            project_id=state["project_id"]
+        ))
+
+        state["monitoring_results"] = result
+        state["alerts"] = result.get("alerts", [])
+        print(
+            f"[Agent B] Generated {result.get('total_alerts', 0)} alert(s) "
+            f"with {result.get('critical_alerts', 0)} critical"
+        )
+
+    except Exception as e:
+        error_msg = f"Agent B error: {str(e)}"
+        print(f"[Agent B] {error_msg}")
+        state["errors"].append(error_msg)
+        state["monitoring_results"] = {
+            "project_id": state["project_id"],
+            "status": "failed",
+            "delay_alerts": [],
+            "cost_variance_alerts": [],
+            "anomaly_alerts": [],
+            "alerts": [],
+            "total_alerts": 0,
+            "critical_alerts": 0,
+            "requires_immediate_action": False,
+            "errors": [error_msg],
+        }
+        state["alerts"] = []
 
     return state
 
@@ -237,6 +268,7 @@ async def run_pipeline(project_id: str, documents: list[dict]) -> dict:
         "project_id": project_id,
         "documents": documents,
         "extracted_fields": {},
+        "monitoring_results": {},
         "alerts": [],
         "compliance_score": {},
         "reports": {},
