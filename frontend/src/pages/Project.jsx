@@ -62,36 +62,70 @@ function BigHealthRing({ score }) {
 
 function OverviewTab({ project, alerts }) {
   const f = project;
-  const hasDetails = f.contractor || f.location || f.contract_value || f.cidb_grade || f.scope;
+
+  // Standardized fields with N/A defaults
+  const standardFields = [
+    { label: 'Contractor', value: f.contractor || 'N/A', priority: 'high' },
+    { label: 'CIDB Registration', value: f.cidb_registration || 'N/A', priority: 'high' },
+    { label: 'Location', value: f.location || 'N/A', priority: 'high' },
+    { label: 'Start Date', value: f.start_date || 'N/A', priority: 'high' },
+    { label: 'End Date', value: f.end_date || 'N/A', priority: 'high' },
+    { label: 'Client', value: f.client || 'N/A', priority: 'medium' },
+    { label: 'CIDB Grade', value: f.cidb_grade || 'N/A', priority: 'medium' },
+    { label: 'Contract Value', value: f.contract_value ? `RM ${Number(f.contract_value).toLocaleString()}` : 'N/A', priority: 'medium' },
+    { label: 'Scope', value: f.scope || 'N/A', priority: 'medium' },
+    { label: 'Project Type', value: f.project_type || 'N/A', priority: 'low' },
+  ];
+
+  // Filter out placeholder values from Agent A
+  const cleanedFields = standardFields.map(field => ({
+    ...field,
+    value: (field.value === 'Unknown Contractor' || field.value === 'Unnamed Project') ? 'N/A' : field.value,
+    isExtracted: field.value !== 'N/A' && field.value !== 'Unknown Contractor' && field.value !== 'Unnamed Project'
+  }));
 
   return (
     <div className="space-y-6 animate-slide-up pb-8">
       <div className="card p-6">
-        <h3 className="font-semibold text-lg text-[#1c1b18] mb-4 font-outfit">Project Overview</h3>
-        {hasDetails ? (
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-            {[
-              ['Contractor', f.contractor],
-              ['Client', f.client],
-              ['Location', f.location],
-              ['CIDB Grade', f.cidb_grade],
-              ['Contract Value', f.contract_value ? `RM ${Number(f.contract_value).toLocaleString()}` : null],
-              ['Scope', f.scope],
-              ['Start Date', f.start_date],
-              ['End Date', f.end_date],
-              ['Project Type', f.project_type],
-              ['Extraction', f._extraction_method],
-            ].filter(([, v]) => v && v !== 'Unknown Contractor' && v !== 'Unnamed Project').map(([label, value]) => (
-              <div key={label} className="flex flex-col">
-                <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9b9794]">{label}</dt>
-                <dd className="text-[#1c1b18] font-medium mt-0.5 truncate">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="text-[#6b6860] leading-relaxed">
-            {f.description || 'Run the AI pipeline to extract project details from uploaded documents.'}
-          </p>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg text-[#1c1b18] font-outfit">Project Overview</h3>
+          {f._extraction_method && (
+            <span className="text-[10px] text-[#9b9794] uppercase tracking-wider">
+              Extracted via {f._extraction_method}
+            </span>
+          )}
+        </div>
+
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+          {cleanedFields.map(({ label, value, isExtracted, priority }) => (
+            <div key={label} className="flex flex-col">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#9b9794]">
+                {label}
+                {priority === 'high' && (
+                  <span className="px-1.5 py-0.5 rounded text-[8px] bg-orange-100 text-orange-600 font-bold">
+                    REQUIRED
+                  </span>
+                )}
+              </dt>
+              <dd className={`text-[#1c1b18] font-medium mt-1 ${value === 'N/A' ? 'text-[#9b9794] italic' : ''}`}>
+                {value}
+                {isExtracted && f._confidence_score && (
+                  <span className="ml-2 text-[10px] text-green-600">
+                    ✓ {Math.round(f._confidence_score * 100)}%
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        {/* Extraction status */}
+        {f.status === 'pending' && (
+          <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-100">
+            <p className="text-sm text-blue-700">
+              📄 Upload documents and run the AI pipeline to extract project details automatically.
+            </p>
+          </div>
         )}
       </div>
 
