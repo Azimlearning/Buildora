@@ -1,212 +1,217 @@
-# Buildora
+# 🏗️ Buildora
 
-AI-powered construction project management system for Malaysian construction projects.
+> **AI-powered construction project management platform for Malaysian construction projects.**
+> Built for UM Hackathon 2025 — automated compliance, monitoring, and reporting across a 5-agent pipeline.
 
-## Quick Start
+---
+
+## 📄 Submission Documents
+
+All hackathon submission documents are located in the [`Submission_documents/`](./Submission_documents/) folder:
+
+| Document | File |
+|----------|------|
+| 📊 **Slides (Pitch Deck)** | `Buildora AI for Malaysia Construction.pptx` |
+| 📑 **Slides (PDF)** | `Buildora AI for Malaysia Construction.pdf` |
+| 📋 **PRD** *(Product Requirements Document)* | Included in submission package |
+| 🏛️ **SAD** *(System Architecture Document)* | Included in submission package |
+| 🧪 **QATD** *(QA & Test Document)* | Included in submission package |
+
+---
+
+## 🚀 Quick Start
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Azimlearning/Buildora.git
 cd Buildora
 
-# 2. Copy environment template
+# 2. Set up environment
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your API keys (see Environment Variables section below)
 
-# 3. Start all services
-docker-compose up -d
+# 3. Install backend dependencies
+pip install -r requirements.txt
 
-# 4. Access the application
-# Frontend: http://localhost:5173
-# Backend API: http://localhost:8000
-# MinIO Console: http://localhost:9001
+# 4. Start Backend (Terminal 1) — run from project root
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+# 5. Start Frontend (Terminal 2)
+cd frontend
+npm install
+npm run dev
 ```
 
-## Team Members & Responsibilities
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| Swagger Docs | http://localhost:8000/docs |
 
-| Member | Component | Branch Prefix |
-|--------|-----------|---------------|
-| **Chip/Azim** | Backend + Orchestrator + Agent A | `azim/` |
-| **Farah** | Frontend + Agent D + UI/UX Fonts | `farah/` |
-| **Khair** | Firebase + Agent B (Monitor) | `khair/` |
-| **Harry** | Agent E (Alerts/Reminders) + CIDB data | `harry/` |
-| **Aliasya** | Agent C (Compliance logic) | `ali/` |
+---
 
-## Architecture
+## 👥 Team Members & Responsibilities
 
-```
-PM Browser → React Frontend → FastAPI → LangGraph Orchestrator
-                                            ↓
-                    ┌───────────────────────┼───────────────────────┬─────────────┐
-                    ↓                       ↓                       ↓             ↓
-                Agent A              Agent B              Agent C → Agent D   Agent E
-            (Doc Reader)           (Monitor)           (Compliance) (Reports) (Alerts)
-                    ↓                       ↓                       ↓             ↓
-            Firebase Storage        Firebase DB          PDF + XLSX      Telegram
-                    └───────────── Firebase Realtime DB ─────────────────┘
-```
+| Member | Component | Branch |
+|--------|-----------|--------|
+| **Azim (Chip)** | Backend + Orchestrator + Agent A | `azim` |
+| **Farah** | Frontend + Agent D + UI/UX | `farah` |
+| **Khaidhir** | Firebase + Agent B (Monitor) | `khaidhir` |
+| **Harry** | Agent E (Alerts) + CIDB data | `development` |
+| **Aliasya** | Agent C (Compliance logic) | `aliasya` |
 
-## System Components
+---
 
-- **Agent A**: PDF parsing & field extraction (pdfplumber, PyMuPDF, Tesseract OCR, Z.AI GLM)
-- **Agent B**: Delay & cost variance monitoring (>3 days, >8% detection)
-- **Agent C**: CIDB BISQ compliance scoring (conditional execution)
-- **Agent D**: Report generation (branded PDF + XLSX cost tracker)
-- **Agent E**: Alerts & reminders (Telegram notifications, scheduled reminders)
-- **Orchestrator**: LangGraph state machine coordinating all 5 agents
-- **Firebase Firestore**: Project records and metadata
-- **Firebase Realtime Database**: Shared state store for inter-agent communication
-- **Firebase Storage**: Document storage
-
-## Development Workflow
-
-### IMPORTANT: Read These First
-1. **[GITHUB_MANAGEMENT.md](./GITHUB_MANAGEMENT.md)** - Git workflow, branching, PR process
-2. **[FILE_STRUCTURE.md](./FILE_STRUCTURE.md)** - Mandatory folder structure
-
-### Starting Work
-```bash
-# Always work in feature branches
-git checkout main
-git pull origin main
-git checkout -b <your-name>/<feature-name>
-
-# Make changes, commit, push
-git add <files>
-git commit -m "[Component] Description"
-git push origin <your-name>/<feature-name>
-
-# Create PR on GitHub for review
-```
-
-### Running Tests
-```bash
-# Run all tests
-docker-compose exec backend pytest
-
-# Run specific test
-docker-compose exec backend pytest backend/tests/test_orchestrator.py
-
-# Run with coverage
-docker-compose exec backend pytest --cov=backend
-```
-
-## Project Structure
+## 🏛️ Architecture
 
 ```
-buildora/
-├── backend/              # Python/FastAPI
-│   ├── agents/          # AI agents + orchestrator
-│   ├── api/             # REST endpoints
-│   ├── core/            # Shared utilities
-│   ├── db/              # Database models
-│   └── tests/           # Test suite
-├── frontend/            # React + Vite + Tailwind
+PM Browser → React Frontend → FastAPI Backend → LangGraph Orchestrator
+                                                        ↓
+                        ┌───────────────────────────────┼────────────────────┐
+                        ↓                               ↓                    ↓
+                    Agent A                         Agent B             Agent C
+                (Doc Reader)                      (Monitor)          (Compliance)
+                        ↓                               ↓                    ↓
+                        └───────────────────────── Agent D ──────────── Agent E
+                                                  (Reports)            (Alerts)
+                                                      ↓                    ↓
+                                              PDF + XLSX              Telegram
+                                                      └──── Firebase ──────┘
+```
+
+---
+
+## 🤖 System Components
+
+| Agent | Role | Key Tech |
+|-------|------|----------|
+| **Agent A** | PDF parsing & field extraction | pdfplumber, PyMuPDF, Tesseract OCR, Z.AI GLM |
+| **Agent B** | Delay & cost variance monitoring (>3 days, >8%) | Firebase Realtime DB |
+| **Agent C** | CIDB BISQ compliance scoring | Rule-based + GLM fallback |
+| **Agent D** | Report generation — branded PDF + XLSX | ReportLab, OpenPyXL |
+| **Agent E** | Alerts & reminders | Telegram Bot API |
+| **Orchestrator** | LangGraph state machine coordinating all 5 agents | LangGraph |
+| **Chat** | AI assistant for project Q&A | OpenAI GPT-3.5-turbo |
+
+**Databases:**
+- **Firebase Firestore** — Project records & metadata
+- **Firebase Realtime Database** — Shared inter-agent state store
+- **Firebase Storage** — Document storage
+
+---
+
+## 🗂️ Project Structure
+
+```
+Buildora/
+├── backend/
+│   ├── agents/
+│   │   ├── agent_a/         # Doc reader & field extractor
+│   │   ├── agent_b/         # Project monitor
+│   │   ├── agent_c/         # Compliance checker
+│   │   ├── agent_d/         # Report generator
+│   │   ├── agent_e/         # Alerts & Telegram
+│   │   └── orchestrator/    # LangGraph pipeline
+│   ├── api/                 # REST endpoints
+│   │   ├── chat.py          # AI chat endpoint
+│   │   ├── projects.py
+│   │   ├── reports.py
+│   │   ├── upload.py
+│   │   └── notifications.py
+│   └── core/                # Shared utilities & Firebase client
+├── frontend/
 │   └── src/
-│       ├── components/  # UI components
-│       ├── pages/       # Route pages
-│       └── api/         # API client
-└── data/                # Demo data
+│       ├── components/      # UI components (Chat, Pipeline, Reports...)
+│       ├── pages/           # Home, Project pages
+│       └── api/             # API client
+├── Submission_documents/    # 📋 Hackathon deliverables (slides, PRD, SAD, QATD)
+├── knowledge_base.json      # CIDB domain knowledge
+├── .env.example             # Environment variable template
+└── QUICKSTART.md            # Detailed setup guide
 ```
 
-See [FILE_STRUCTURE.md](./FILE_STRUCTURE.md) for complete structure.
+---
 
-## Environment Variables
+## 🔑 Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and fill in:
 
-- `GLM_API_KEY` - Z.AI GLM API key for field extraction (placeholder until provided)
-- `FIREBASE_PROJECT_ID` - Firebase project ID
-- `FIREBASE_CREDENTIALS` - Path to Firebase service account JSON
-- `TELEGRAM_BOT_TOKEN` - Telegram bot for Agent E alerts
-- `TELEGRAM_CHAT_ID` - Telegram chat ID for notifications
+```env
+# Z.AI (GLM) — field extraction
+GLM_API_KEY=your_key_here
+GLM_API_URL=https://api.z.ai/api/paas/v4/chat/completions
+GLM_MODEL=glm-4-flash
+GLM_FALLBACK_MODE=true       # Use rule-based fallback on API errors
 
-## Tech Stack
+# Firebase
+FIREBASE_PROJECT_ID=buildora-a06f8
+FIREBASE_CREDENTIALS=./firebase-credentials.json
+FIREBASE_STORAGE_BUCKET=buildora-a06f8.appspot.com
 
-**Backend:**
-- FastAPI (Python 3.10+)
-- LangGraph (agent orchestration)
-- pdfplumber, PyMuPDF, Tesseract (PDF parsing)
-- Firebase (Firestore + Realtime Database + Storage)
-- Z.AI GLM-4-Flash (field extraction)
+# OpenAI (Chat feature)
+OPENAI_API_KEY=your_key_here
 
-**Frontend:**
-- React 18
-- Vite
-- Tailwind CSS
-- Custom UI/UX fonts (Farah)
-
-**Infrastructure:**
-- Docker + Docker Compose
-- Firebase
-- Python 3.10+
-
-## API Endpoints
-
-```
-GET  /                    # Health check
-GET  /health              # Detailed health status
-POST /api/upload          # Upload project documents
-GET  /api/projects        # List projects
-POST /api/projects        # Create project
-POST /api/milestones      # Update milestone
-GET  /api/reports/{id}    # Generate & download reports
+# Telegram (Agent E alerts)
+TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_CHAT_ID=your_chat_id
 ```
 
-## Testing Strategy
+---
 
-See `backend/tests/` for test suite:
-- Day 1: GLM response parsing
-- Day 2: State handoff between agents
-- Day 3-4: Field extraction (≥10 fields, ≥80% accuracy)
-- Day 5-6: Delay & cost variance detection
-- Day 8: Compliance scoring
-- Day 10: Report generation
-- Day 11: Full pipeline E2E (<15s)
+## 🌐 API Endpoints
 
-## Demo Mode
+```
+GET   /                         # Health check
+GET   /health                   # Detailed health status
+POST  /api/upload               # Upload project documents
+GET   /api/projects             # List all projects
+POST  /api/projects             # Create new project
+POST  /api/milestones           # Update milestone status
+GET   /api/reports/{id}         # Generate & download report
+POST  /api/chat                 # AI project assistant (chat)
+GET   /api/notifications        # Get project notifications
+GET   /api/pipeline/status/{id} # Real-time pipeline SSE stream
+```
 
-For judges/demo purposes:
+---
+
+## 🛠️ Tech Stack
+
+**Backend:** FastAPI · Python 3.10+ · LangGraph · pdfplumber · PyMuPDF · Tesseract OCR · ReportLab · OpenPyXL · Z.AI GLM · OpenAI
+
+**Frontend:** React 18 · Vite · Tailwind CSS · Custom fonts
+
+**Infrastructure:** Firebase (Firestore · Realtime DB · Storage) · Python 3.10+
+
+---
+
+## 🐛 Troubleshooting
+
+**Backend won't start:**
 ```bash
-# Access demo mode with pre-loaded data
-http://localhost:5173/demo
+# Make sure you're running from the project ROOT, not /backend
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Troubleshooting
+**Firebase connection errors:**
+- Confirm `firebase-credentials.json` is in the project root
+- Check `FIREBASE_PROJECT_ID` in `.env` matches your Firebase project
 
-**Services won't start:**
-```bash
-docker-compose down -v
-docker-compose up --build
-```
+**GLM API 401 errors:**
+- Your key was likely activated via Google/GitHub SSO instead of the invitation email
+- Solution: Use another team member's activation link or contact the Z.AI team
 
-**Database connection issues:**
-```bash
-docker-compose logs postgres
-docker-compose restart postgres
-```
+**Chat not working:**
+- Ensure `OPENAI_API_KEY` is set in your `.env` file (not hardcoded)
 
-**Redis connection issues:**
-```bash
-docker-compose logs redis
-docker-compose exec redis redis-cli -a <REDIS_PASSWORD> ping
-```
+---
 
-## Contributing
+## 📜 License
 
-1. Read [GITHUB_MANAGEMENT.md](./GITHUB_MANAGEMENT.md)
-2. Create feature branch: `<your-name>/<feature>`
-3. Follow [FILE_STRUCTURE.md](./FILE_STRUCTURE.md)
-4. Write tests for new features
-5. Create PR with clear description
-6. Get 1+ approval before merging
+Proprietary — UM Hackathon 2025
 
-## License
+## 💬 Support
 
-Proprietary - UM Hackathon 2024
-
-## Support
-
-- Git issues: Ask Chip/Azim
-- Architecture questions: Check reference docs in `Ref documents/`
-- Bugs: Create GitHub issue
+- Architecture questions → Check `Ref documents/`
+- Git issues → Ask Azim
+- Bugs → Open a GitHub Issue
