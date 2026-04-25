@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+firebase-credentials.json
 
 # Python
 __pycache__/
@@ -80,3 +81,9 @@ temp/
 # OS
 Thumbs.db
 .DS_Store
+
+mock_db.json
+mock_db.tmp
+
+firebase-credentials.json
+buildora-a06f8-firebase-adminsdk-*.json

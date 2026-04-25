@@ -3,7 +3,46 @@
 ## Installed Plugins & Tools
 
 ### everything-claude-code Plugin
-Marketplace plugin installed from: https://github.com/affaan-m/everything-claude-code
+**Status:** ✅ Fully Installed (Full Profile)
+**Source:** https://github.com/affaan-m/everything-claude-code
+**Install Date:** 2026-04-21
+
+**Installation Details:**
+- Rules installed: `~/.claude/rules/` (all languages + common)
+- Agents installed: `~/.claude/agents/` (48 specialized agents)
+- Skills available: 183+ skills
+- Profile: `full` (includes all modules)
+
+**Key Modules Installed:**
+- Core: rules-core, agents-core, commands-core, hooks-runtime
+- Languages: Python, TypeScript, Go, Rust, Swift, Java, Kotlin, C++, C#, Dart, PHP, Perl
+- Frameworks: FastAPI, Django, Laravel, Spring Boot, NestJS, Next.js
+- Workflows: quality, security, testing, deployment
+- Domains: database, orchestration, supply-chain, document-processing
+- APIs: research-apis, social-distribution, media-generation
+
+**Usage:**
+```bash
+# Use namespaced form for plugin-installed skills
+/everything-claude-code:plan "Add user authentication"
+/everything-claude-code:code-review
+/everything-claude-code:python-review
+/everything-claude-code:tdd
+
+# List all available skills
+/plugin list everything-claude-code@everything-claude-code
+```
+
+**Available Specialized Agents:**
+- `architect` - Software architecture and system design
+- `code-reviewer` - Expert code review
+- `python-review` - Python-specific code review
+- `build-error-resolver` - Build and compilation error fixing
+- `database-reviewer` - Database query optimization and schema design
+- `security-reviewer` - Security audit and vulnerability detection
+- `docs-lookup` - Documentation retrieval via Context7
+- `e2e-runner` - End-to-end testing with Playwright
+- And 40+ more specialized agents...
 
 ### gstack
 **Location:** `~/.claude/skills/gstack`
@@ -104,3 +143,23 @@ CLI commands available via `nlm`:
 - `nlm batch` - Batch operations
 - `nlm pipeline` - Multi-step workflows
 - `nlm setup add` - Configure AI tools integration
+
+## Skill routing
+
+When the user's request matches an available skill, ALWAYS invoke it using the Skill
+tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
+The skill has specialized workflows that produce better results than ad-hoc answers.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors → invoke investigate
+- Ship, deploy, push, create PR → invoke ship
+- QA, test the site, find bugs → invoke qa
+- Code review, check my diff → invoke review
+- Update docs after shipping → invoke document-release
+- Weekly retro → invoke retro
+- Design system, brand → invoke design-consultation
+- Visual audit, design polish → invoke design-review
+- Architecture review → invoke plan-eng-review
+- Save progress, checkpoint, resume → invoke checkpoint
+- Code quality, health check → invoke health
