@@ -206,3 +206,12 @@ export const getAgentStreamUrl = (jobId) => `${BASE}/api/agent-stream/${jobId}`;
  * @returns {Promise<{ alerts: Array<{ id: number, type: string, text: string }> }>}
  */
 export const getProjectAlerts = (projectId) => request(`/api/projects/${projectId}/alerts`);
+
+/**
+ * Delete a project and all associated data.
+ * DELETE /api/projects/:id
+ * @param {string} id - Project ID
+ * @returns {Promise<{ status: string, project_id: string }>}
+ */
+export const deleteProject = (id) =>
+  request(`/api/projects/${id}`, { method: 'DELETE' });

@@ -58,11 +58,38 @@ function BigHealthRing({ score }) {
 }
 
 function OverviewTab({ project, alerts }) {
+  const f = project; // shorthand
+  const hasDetails = f.contractor || f.location || f.contract_value || f.cidb_grade || f.scope;
+
   return (
     <div className="space-y-6 animate-slide-up pb-8">
       <div className="card p-6">
-        <h3 className="font-semibold text-lg text-[#1c1b18] mb-3 font-outfit">Project Overview</h3>
-        <p className="text-[#6b6860] leading-relaxed max-w-3xl">{project.description}</p>
+        <h3 className="font-semibold text-lg text-[#1c1b18] mb-4 font-outfit">Project Overview</h3>
+        {hasDetails ? (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+            {[
+              ['Contractor', f.contractor],
+              ['Client', f.client],
+              ['Location', f.location],
+              ['CIDB Grade', f.cidb_grade],
+              ['Contract Value', f.contract_value ? `RM ${Number(f.contract_value).toLocaleString()}` : null],
+              ['Scope', f.scope],
+              ['Start Date', f.start_date],
+              ['End Date', f.end_date],
+              ['Project Type', f.project_type],
+              ['Extraction', f._extraction_method],
+            ].filter(([, v]) => v && v !== 'Unknown Contractor' && v !== 'Unnamed Project').map(([label, value]) => (
+              <div key={label} className="flex flex-col">
+                <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9b9794]">{label}</dt>
+                <dd className="text-[#1c1b18] font-medium mt-0.5 truncate">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-[#6b6860] leading-relaxed">
+            {f.description || 'Run the AI pipeline to extract project details from uploaded documents.'}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -146,6 +173,30 @@ export default function Project() {
         setLoading(false);
       });
   }, [id]);
+
+  // Auto-refresh project data while a pipeline job is running (every 10s)
+  useEffect(() => {
+    if (!jobId) return; // No job = no need to poll
+
+    const poll = setInterval(async () => {
+      try {
+        const [projectData, alertsData] = await Promise.all([
+          getProject(id),
+          getProjectAlerts(id).catch(() => ({ alerts: [] })),
+        ]);
+        setProject(projectData);
+        setAlerts(alertsData.alerts || []);
+        // Stop polling once backend marks project as processed/error
+        if (projectData.status === 'processed' || projectData.status === 'error') {
+          clearInterval(poll);
+        }
+      } catch (e) {
+        console.warn('[Buildora] Poll failed:', e.message);
+      }
+    }, 10_000); // every 10s
+
+    return () => clearInterval(poll);
+  }, [id, jobId]);
 
   const handleUploadContinue = async (newFiles) => {
     const newSources = newFiles.map((f, i) => ({

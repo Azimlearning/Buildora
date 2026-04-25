@@ -76,40 +76,40 @@ const AGENTS = [
   {
     id: 'd',
     label: 'Agent D',
-    role: 'Report Generator',
+    role: 'Alerts & Reminders',
     color: '#2563eb',
     bgSoft: 'rgba(37,99,235,0.10)',
     demoLogs: [
-      'Receiving outputs from Agents A, B, C',
-      'Compiling project summary',
-      'Generating cost variance table',
-      'Building delay analysis section',
-      'Embedding compliance checklist',
-      'Rendering PDF layout — 24 pages',
-      'Generating XLSX cost tracker — 180 rows',
-      'Uploading to report storage…',
-      '✓ Report generation complete',
+      'Reading compliance results from Agent C...',
+      'Score below threshold - composing alert...',
+      'Preparing Telegram notification for project manager...',
+      '[!] Alert: Structural PE Endorsement missing',
+      '[!] Alert: BOMBA clearance pending',
+      'Sending notification to project manager...',
+      '[OK] Alerts dispatched successfully',
     ],
-    demoFile: 'report_output.pdf',
-    demoDuration: 2000,
+    demoFile: 'alerts_output.json',
+    demoDuration: 1200,
   },
   {
     id: 'e',
     label: 'Agent E',
-    role: 'Notifications & Alerts',
+    role: 'Report Generator',
     color: '#7c3aed',
     bgSoft: 'rgba(124,58,237,0.10)',
     demoLogs: [
-      'Reading compliance results from Agent C…',
-      'Score below threshold — composing alert…',
-      'Preparing Telegram notification…',
-      'Alert: Structural PE Endorsement missing ⚠',
-      'Alert: BOMBA clearance pending ⚠',
-      'Sending notification to project manager…',
-      '✓ Alerts dispatched successfully',
+      'Receiving outputs from Agents A, B, C, D',
+      'Compiling project summary',
+      'Generating cost variance table',
+      'Building delay analysis section',
+      'Embedding compliance checklist',
+      'Rendering PDF layout - 24 pages',
+      'Generating XLSX cost tracker - 180 rows',
+      'Uploading to report storage...',
+      '[OK] Report generation complete',
     ],
-    demoFile: 'alerts_output.json',
-    demoDuration: 1200,
+    demoFile: 'report_output.pdf',
+    demoDuration: 2000,
   },
 ];
 
@@ -213,7 +213,9 @@ function AgentRow({ agent, state, onToggle, expanded }) {
                   key={i}
                   className="log-line-enter text-[12px] font-mono leading-relaxed"
                   style={{
-                    color: line.startsWith('✓') ? '#4ade80' : line.includes('⚠') ? '#fbbf24' : '#e5e3de',
+                    color: (line.startsWith('[OK]') || line.startsWith('✓')) ? '#4ade80' 
+                         : (line.includes('[!]') || line.includes('⚠')) ? '#fbbf24' 
+                         : '#e5e3de',
                     animationDelay: `${i * 0.02}s`,
                   }}
                 >

@@ -22,7 +22,7 @@ from backend.agents.agent_c.agent import AgentC
 from backend.agents.agent_e.agent import AgentE
 from backend.core.glm_client import get_glm_client
 from backend.core.firebase_client import get_firestore_client
-from backend.core.storage import FirebaseStorageClient
+from backend.core.storage import get_storage_client
 
 
 def _run_async(coro):
@@ -48,7 +48,7 @@ def agent_a_node(state: BuildoraState) -> BuildoraState:
     try:
         # Use singleton clients so data is shared across agent nodes
         glm_client = get_glm_client()
-        storage_client = FirebaseStorageClient()
+        storage_client = get_storage_client()
         firestore_client = get_firestore_client()
 
         # Initialize Agent A
@@ -116,7 +116,7 @@ def agent_e_node(state: BuildoraState) -> BuildoraState:
     try:
         # Use singleton clients
         firestore_client = get_firestore_client()
-        storage_client = FirebaseStorageClient()
+        storage_client = get_storage_client()
 
         # Initialize Agent E
         agent_e = AgentE(

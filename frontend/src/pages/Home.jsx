@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, uploadDocuments } from '../api/client.js';
-import { Plus, MoreVertical, Building2, HardHat, Hammer, Construction, Activity, Loader2 } from 'lucide-react';
+import { getProjects, uploadDocuments, deleteProject } from '../api/client.js';
+import { Plus, MoreVertical, Building2, HardHat, Hammer, Construction, Activity, Loader2, Trash2 } from 'lucide-react';
 import UploadModal from '../components/UploadModal.jsx';
 
 const CARD_COLORS = ['#1a2a1a', '#1a1a2a', '#2a1a10', '#1a2520', '#251a10'];
@@ -53,11 +53,27 @@ export default function Home() {
   const [sortBy, setSortBy] = useState('recent');
 
   useEffect(() => {
+    loadProjects();
+  }, []);
+
+  function loadProjects() {
+    setLoading(true);
     getProjects().then(data => {
       setProjects(data);
       setLoading(false);
-    });
-  }, []);
+    }).catch(() => setLoading(false));
+  }
+
+  const handleDeleteProject = async (e, projectId) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this project and all its data? This cannot be undone.')) return;
+    try {
+      await deleteProject(projectId);
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+    } catch (err) {
+      alert('Failed to delete project: ' + (err.message || 'Unknown error'));
+    }
+  };
 
   const filteredProjects = projects.filter(p => 
     (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -82,6 +98,8 @@ export default function Home() {
         files.map(f => ({ id: f.name, name: f.name, type: f.type?.startsWith('image') ? 'image' : 'document' }))
       ));
       setIsModalOpen(false);
+      // Refresh project list after a short delay so the new project is included
+      setTimeout(loadProjects, 800);
       navigate(`/project/${project_id}`);
     } catch (err) {
       setUploadError(err.message || 'Upload failed. Please try again.');
@@ -158,17 +176,29 @@ export default function Home() {
               <div 
                 key={p.id}
                 onClick={() => navigate(`/project/${p.id}`)}
-                className="relative flex flex-col h-[180px] rounded-xl p-5 cursor-pointer hover:-translate-y-1 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md"
+                className="relative flex flex-col h-[180px] rounded-xl p-5 cursor-pointer hover:-translate-y-1 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md group"
                 style={{ backgroundColor: bgColor }}
               >
-                {/* Top: Icon & Kebab */}
+                {/* Top: Icon & actions */}
                 <div className="flex justify-between items-start mb-auto">
                   <div className="p-2 rounded-lg bg-white/5">
                     <Icon className="w-6 h-6 text-white/60" />
                   </div>
-                  <button className="text-white/40 hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {/* Delete button - only visible on hover */}
+                    <button
+                      id={`delete-project-${p.id}`}
+                      aria-label={`Delete project ${p.name}`}
+                      className="text-white/0 group-hover:text-white/40 hover:!text-red-400 transition-colors p-1 rounded"
+                      onClick={(e) => handleDeleteProject(e, p.id)}
+                      title="Delete project"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button className="text-white/40 hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Middle: Text */}

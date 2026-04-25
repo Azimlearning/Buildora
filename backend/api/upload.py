@@ -37,11 +37,11 @@ def run_orchestrator_background(project_id: str, file_paths: List[str], job_id: 
         # ── Agent A: Document Reader ──────────────────────────────────────
         job_tracker[job_id].update({"current_agent": "A", "progress": 10,
                                     "current_file": Path(file_paths[0]).name if file_paths else None})
-        emit("A", "Initialising document parser…")
+        emit("A", "Initialising document parser...")
         for fp in file_paths:
             emit("A", f"Reading {Path(fp).name}")
-        emit("A", "Extracting text layers and fields…")
-        emit("A", "Running Z.AI GLM field extraction…")
+        emit("A", "Extracting text layers and fields...")
+        emit("A", "Running Z.AI GLM field extraction...")
 
         documents = [{"file_path": fp, "filename": Path(fp).name,
                       "uploaded_at": datetime.utcnow().isoformat()} for fp in file_paths]
@@ -51,65 +51,65 @@ def run_orchestrator_background(project_id: str, file_paths: List[str], job_id: 
         import asyncio as _asyncio
         result = _asyncio.run(run_pipeline(project_id, documents))
 
-        emit("A", f"✓ Extracted fields from {len(file_paths)} document(s)")
+        emit("A", f"[OK] Extracted fields from {len(file_paths)} document(s)")
 
-        # ── Agent B: Schedule Monitor ─────────────────────────────────────
+        # ── Agent B: Schedule Monitor ─────────────────────────────────────────
         job_tracker[job_id].update({"current_agent": "B", "progress": 40,
                                     "message": "Agent B: Monitoring schedule"})
-        emit("B", "Analysing project schedule…")
-        emit("B", "Checking milestone variances…")
+        emit("B", "Analysing project schedule...")
+        emit("B", "Checking milestone variances...")
         alerts = (result or {}).get("alerts", [])
         if alerts:
             for alert in alerts[:3]:
-                emit("B", f"⚠ Alert: {alert.get('message', str(alert))}")
+                emit("B", f"[!] Alert: {alert.get('message', str(alert))}")
         else:
             emit("B", "No schedule delays detected")
-        emit("B", "✓ Schedule monitoring complete")
+        emit("B", "[OK] Schedule monitoring complete")
 
-        # ── Agent C: CIDB Compliance ──────────────────────────────────────
+        # ── Agent C: CIDB Compliance ──────────────────────────────────────────
         job_tracker[job_id].update({"current_agent": "C", "progress": 60,
                                     "message": "Agent C: Compliance check"})
-        emit("C", "Loading CIDB BISQ 2024 checklist…")
-        emit("C", "Cross-referencing extracted fields…")
+        emit("C", "Loading CIDB BISQ 2024 checklist...")
+        emit("C", "Cross-referencing extracted fields...")
         compliance_score = (result or {}).get("compliance_score", {})
         if isinstance(compliance_score, dict):
-            score = compliance_score.get("score", "—")
+            score = compliance_score.get("score", "--")
             status = compliance_score.get("status", "unknown")
             gaps = compliance_score.get("gaps", [])
             emit("C", f"CIDB compliance score: {round(score) if isinstance(score, (int, float)) else score}/100")
             if gaps:
                 emit("C", f"Found {len(gaps)} compliance gap(s)")
                 for gap in gaps[:3]:
-                    emit("C", f"  ⚠ {gap.get('description_en', str(gap))}")
-            emit("C", f"✓ Compliance check complete — status: {status}")
+                    emit("C", f"  [!] {gap.get('description_en', str(gap))}")
+            emit("C", f"[OK] Compliance check complete - status: {status}")
         else:
-            emit("C", "✓ Compliance check complete")
+            emit("C", "[OK] Compliance check complete")
 
-        # ── Agent D: Report Generator ─────────────────────────────────────
+        # ── Agent D: Alerts / Reminders ──────────────────────────────────────
         job_tracker[job_id].update({"current_agent": "D", "progress": 80,
-                                    "message": "Agent D: Generating reports"})
-        emit("D", "Compiling project summary…")
+                                    "message": "Agent D: Generating alerts"})
+        emit("D", "Reading compliance results from Agent C...")
+        if isinstance(compliance_score, dict) and compliance_score.get("score", 100) < 80:
+            emit("D", "Score below threshold - composing alert...")
+            emit("D", "Preparing Telegram notification for project manager...")
+        else:
+            emit("D", "Compliance score acceptable - no urgent alerts")
+        emit("D", "[OK] Notifications dispatched")
+
+        # ── Agent E: Report Generator ─────────────────────────────────────────
+        job_tracker[job_id].update({"current_agent": "E", "progress": 95,
+                                    "message": "Agent E: Generating reports"})
+        emit("E", "Compiling project summary...")
         reports = (result or {}).get("reports", {})
         if reports.get("pdf"):
-            emit("D", "✓ PDF project report generated")
+            emit("E", "[OK] PDF project report generated")
         else:
-            emit("D", "Rendering PDF report…")
+            emit("E", "Rendering PDF report...")
         if reports.get("xlsx"):
-            emit("D", "✓ XLSX cost tracker generated")
+            emit("E", "[OK] XLSX cost tracker generated")
         else:
-            emit("D", "Generating XLSX cost tracker…")
-        emit("D", "✓ Reports ready for download")
-
-        # ── Agent E: Notifications ────────────────────────────────────────
-        job_tracker[job_id].update({"current_agent": "E", "progress": 95,
-                                    "message": "Agent E: Sending notifications"})
-        emit("E", "Reading compliance results from Agent C…")
-        if isinstance(compliance_score, dict) and compliance_score.get("score", 100) < 80:
-            emit("E", "Score below threshold — composing alert…")
-            emit("E", "Preparing Telegram notification for project manager…")
-        else:
-            emit("E", "Compliance score acceptable — no urgent alerts")
-        emit("E", "✓ Notifications dispatched")
+            emit("E", "Generating XLSX cost tracker...")
+        emit("E", "[OK] Reports ready for download")
 
         # Done
         job_tracker[job_id].update({
@@ -124,10 +124,9 @@ def run_orchestrator_background(project_id: str, file_paths: List[str], job_id: 
             db = get_firestore_client()
             _asyncio.run(db.update_project(project_id, {
                 "status": "processed",
-                "updated_at": datetime.utcnow().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as ex:
+            print(f"[Upload] Final status update failed (non-fatal): {ex}")
 
     except Exception as e:
         job_tracker[job_id].update({

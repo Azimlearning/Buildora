@@ -12,7 +12,40 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials
 import os
+import json
+import pathlib
 from backend.core.config import get_settings
+
+# Path for the persistent mock DB (survives uvicorn --reload)
+_MOCK_DB_PATH = pathlib.Path(__file__).parent.parent.parent / "mock_db.json"
+
+_EMPTY_MOCK = lambda: {"projects": {}, "documents": {}, "extracted_fields": {}, "alerts": {}, "reports": {}}
+
+
+def _load_mock_db() -> Dict:
+    """Load mock DB from JSON file, or return empty structure."""
+    try:
+        if _MOCK_DB_PATH.exists():
+            with open(_MOCK_DB_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # Ensure all expected keys exist
+                db = _EMPTY_MOCK()
+                db.update(data)
+                return db
+    except Exception as e:
+        print(f"[MockDB] Failed to load {_MOCK_DB_PATH}: {e}")
+    return _EMPTY_MOCK()
+
+
+def _save_mock_db(db: Dict) -> None:
+    """Persist mock DB to JSON file atomically."""
+    try:
+        tmp = _MOCK_DB_PATH.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(db, f, indent=2, default=str)
+        tmp.replace(_MOCK_DB_PATH)
+    except Exception as e:
+        print(f"[MockDB] Failed to save {_MOCK_DB_PATH}: {e}")
 
 
 class FirestoreClient:
@@ -21,7 +54,7 @@ class FirestoreClient:
     def __init__(self):
         self.settings = get_settings()
         self.is_mock = False
-        self.mock_db = {"projects": {}, "documents": {}, "extracted_fields": {}, "alerts": {}, "reports": {}}
+        self.mock_db = _load_mock_db()  # Load from file (survives reloads)
         self._initialize_firebase()
 
     def _initialize_firebase(self):
@@ -61,9 +94,10 @@ class FirestoreClient:
         project_id = str(uuid.uuid4())
         
         if self.is_mock:
-            project_data['created_at'] = datetime.now()
-            project_data['updated_at'] = datetime.now()
+            project_data['created_at'] = datetime.now().isoformat()
+            project_data['updated_at'] = datetime.now().isoformat()
             self.mock_db["projects"][project_id] = project_data
+            _save_mock_db(self.mock_db)
             return project_id
 
         project_data['created_at'] = firestore.SERVER_TIMESTAMP
@@ -95,12 +129,18 @@ class FirestoreClient:
         if self.is_mock:
             if project_id in self.mock_db["projects"]:
                 self.mock_db["projects"][project_id].update(updates)
-                self.mock_db["projects"][project_id]['updated_at'] = datetime.now()
+                self.mock_db["projects"][project_id]['updated_at'] = datetime.now().isoformat()
+            _save_mock_db(self.mock_db)
             return True
 
-        updates['updated_at'] = firestore.SERVER_TIMESTAMP
-        self.db.collection('projects').document(project_id).update(updates)
-        return True
+        try:
+            updates['updated_at'] = firestore.SERVER_TIMESTAMP
+            # Use set(merge=True) so this works even if the doc was just created
+            self.db.collection('projects').document(project_id).set(updates, merge=True)
+            return True
+        except Exception as e:
+            print(f"[FirestoreClient] update_project({project_id}) FAILED: {e}")
+            raise
 
     async def list_projects(self, limit: int = 100) -> List[Dict[str, Any]]:
         """List all projects"""
@@ -119,6 +159,34 @@ class FirestoreClient:
             data['id'] = doc.id
             projects.append(data)
         return projects
+
+    async def delete_project(self, project_id: str) -> bool:
+        """Delete a project and all associated sub-collections from Firestore."""
+        if self.is_mock:
+            self.mock_db["projects"].pop(project_id, None)
+            # Cascade-delete associated data in mock
+            for col in ("documents", "extracted_fields", "reports", "alerts"):
+                to_del = [k for k, v in self.mock_db[col].items()
+                          if v.get("project_id") == project_id]
+                for k in to_del:
+                    del self.mock_db[col][k]
+            _save_mock_db(self.mock_db)
+            return True
+
+        try:
+            # Delete associated sub-collection documents first
+            for col in ("documents", "extracted_fields", "reports", "alerts"):
+                sub_docs = self.db.collection(col).where(
+                    "project_id", "==", project_id
+                ).stream()
+                for doc in sub_docs:
+                    doc.reference.delete()
+
+            # Delete the project document itself
+            self.db.collection("projects").document(project_id).delete()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"Failed to delete project {project_id}: {e}")
 
     # Document Operations
     async def save_document(
@@ -141,8 +209,9 @@ class FirestoreClient:
         
         if self.is_mock:
             document_data['project_id'] = project_id
-            document_data['uploaded_at'] = datetime.now()
+            document_data['uploaded_at'] = datetime.now().isoformat()
             self.mock_db["documents"][doc_id] = document_data
+            _save_mock_db(self.mock_db)
             return doc_id
 
         document_data['project_id'] = project_id
@@ -198,9 +267,10 @@ class FirestoreClient:
                 'project_id': project_id,
                 'document_id': document_id,
                 'fields': fields,
-                'extracted_at': datetime.now()
+                'extracted_at': datetime.now().isoformat()
             }
             self.mock_db["extracted_fields"][fields_id] = data
+            _save_mock_db(self.mock_db)
             return fields_id
 
         data = {
@@ -258,9 +328,10 @@ class FirestoreClient:
 
         if self.is_mock:
             alert_data['project_id'] = project_id
-            alert_data['created_at'] = datetime.now()
+            alert_data['created_at'] = datetime.now().isoformat()
             alert_data['status'] = alert_data.get('status', 'active')
             self.mock_db["alerts"][alert_id] = alert_data
+            _save_mock_db(self.mock_db)
             return alert_id
 
         alert_data['project_id'] = project_id
@@ -304,7 +375,8 @@ class FirestoreClient:
         if self.is_mock:
             if alert_id in self.mock_db["alerts"]:
                 self.mock_db["alerts"][alert_id]['status'] = status
-                self.mock_db["alerts"][alert_id]['updated_at'] = datetime.now()
+                self.mock_db["alerts"][alert_id]['updated_at'] = datetime.now().isoformat()
+            _save_mock_db(self.mock_db)
             return True
 
         self.db.collection('alerts').document(alert_id).update({
@@ -334,8 +406,9 @@ class FirestoreClient:
 
         if self.is_mock:
             report_data['project_id'] = project_id
-            report_data['generated_at'] = datetime.now()
+            report_data['generated_at'] = datetime.now().isoformat()
             self.mock_db["reports"][report_id] = report_data
+            _save_mock_db(self.mock_db)
             return report_id
 
         report_data['project_id'] = project_id

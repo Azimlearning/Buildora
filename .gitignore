@@ -80,3 +80,9 @@ temp/
 # OS
 Thumbs.db
 .DS_Store
+
+mock_db.json
+mock_db.tmp
+
+firebase-credentials.json
+buildora-a06f8-firebase-adminsdk-*.json
