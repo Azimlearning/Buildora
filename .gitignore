@@ -77,6 +77,13 @@ temp/
 # Docker
 .dockerignore
 
+# Firebase / Secrets
+firebase-credentials.json
+*-credentials.json
+
+# Storage / Mocks
+mock_storage/
+
 # OS
 Thumbs.db
 .DS_Store
