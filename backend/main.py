@@ -42,10 +42,10 @@ async def health():
     }
 
 try:
-    from backend.api import upload, projects, milestones, reports, compliance, notifications, health
+    from backend.api import upload, projects, milestones, reports, compliance, notifications, health, kb
 except ModuleNotFoundError:
     # When running from backend directory, use relative imports
-    from api import upload, projects, milestones, reports, compliance, notifications, health
+    from api import upload, projects, milestones, reports, compliance, notifications, health, kb
 
 from fastapi.responses import StreamingResponse
 import asyncio
@@ -57,6 +57,7 @@ app.include_router(reports.router, prefix="/api", tags=["reports"])
 app.include_router(compliance.router, prefix="/api", tags=["compliance"])
 app.include_router(notifications.router, prefix="/api", tags=["notifications"])
 app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(kb.router)
 
 @app.get("/api/agent-stream/{jobId}")
 async def agent_stream(jobId: str):
