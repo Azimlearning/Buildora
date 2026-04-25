@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, X, Search, FileImage, Link as LinkIcon, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Upload, FileText, X, Link as LinkIcon, ArrowRight, Loader2 } from 'lucide-react';
 
 const ACCEPTED_TYPES = [
   { ext: 'PDF',  mime: 'application/pdf' },
@@ -163,15 +163,7 @@ export default function UploadModal({ isOpen, onClose, onContinue, projectName, 
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-white/10 flex justify-between items-center bg-[#1e1e1f]">
-          <button 
-            onClick={() => inputRef.current?.click()}
-            className="text-[#9b9794] hover:text-white text-sm font-medium transition-colors flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Upload More
-          </button>
-          
+        <div className="px-5 py-4 border-t border-white/10 flex justify-end items-center gap-3 bg-[#1e1e1f]">
           {error && (
             <p className="text-sm text-red-400 text-center px-2">{error}</p>
           )}

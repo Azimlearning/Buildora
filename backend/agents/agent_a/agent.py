@@ -19,7 +19,7 @@ from backend.agents.contracts import (
     DocumentMetadata,
     ProcessingStatus,
 )
-from backend.agents.agent_a.parsers import parse_pdf
+from backend.agents.agent_a.parsers import parse_document
 from backend.agents.agent_a.prompts import build_extraction_prompt
 from backend.core.glm_client import GLMClient
 from backend.core.storage import FirebaseStorageClient
@@ -201,7 +201,7 @@ class AgentA:
         Returns:
             Extracted text content
         """
-        return parse_pdf(file_path)
+        return parse_document(file_path)
 
     async def extract_fields(self, text: str) -> Dict[str, Any]:
         """

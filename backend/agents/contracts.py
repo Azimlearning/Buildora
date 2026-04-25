@@ -339,38 +339,48 @@ class AgentEOutput(TypedDict):
 # ═══════════════════════════════════════════════════════════════
 
 
-class BuildoraState(TypedDict):
+class BuildoraState(TypedDict, total=False):
     """
     Shared state across all agents in the LangGraph pipeline.
 
     This is the single source of truth for the entire workflow.
     Each agent reads from and writes to this state.
+
+    Note: total=False makes all fields optional by default.
+    Required fields are marked explicitly below.
     """
-    # Core identifiers
+    # Core identifiers (required)
     project_id: str
+
+    # Optional core identifiers
     pipeline_run_id: str
     started_at: str  # ISO 8601
+    project_name: str
 
     # Input data
     documents: List[DocumentMetadata]
 
     # Agent A output
-    extracted_fields: Optional[AgentAOutput]
+    extracted_fields: Dict[str, Any]
 
     # Agent B output
-    monitoring_results: Optional[AgentBOutput]
+    monitoring_results: Dict[str, Any]
+    alerts: List[Dict[str, Any]]
 
     # Agent C output
-    compliance_results: Optional[AgentCOutput]
+    compliance_score: Dict[str, Any]
+    compliance_results: Dict[str, Any]
 
     # Agent D output (Telegram)
-    notification_results: Optional[AgentDOutput]
+    notification_results: Dict[str, Any]
+    notifications_sent: int
 
     # Agent E output (Reports)
-    report_results: Optional[AgentEOutput]
+    report_results: Dict[str, Any]
+    reports: Dict[str, Any]
 
     # Pipeline metadata
-    current_agent: Optional[str]
+    current_agent: str
     completed_agents: List[str]
     failed_agents: List[str]
     total_processing_time_ms: int

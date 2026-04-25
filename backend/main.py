@@ -10,9 +10,18 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# CORS configuration
+# CORS configuration — allow any localhost origin so Vite can use any port
+import re as _re
+
+class _LocalhostCORSMiddleware(CORSMiddleware):
+    """Accept any http://localhost:<port> origin in development."""
+    def is_allowed_origin(self, origin: str) -> bool:
+        if _re.match(r'^https?://localhost(:\d+)?$', origin or ''):
+            return True
+        return super().is_allowed_origin(origin)
+
 app.add_middleware(
-    CORSMiddleware,
+    _LocalhostCORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -42,10 +51,10 @@ async def health():
     }
 
 try:
-    from backend.api import upload, projects, milestones, reports, compliance, notifications, health, kb
+    from backend.api import upload, projects, milestones, reports, compliance, notifications, health, kb, chat
 except ModuleNotFoundError:
     # When running from backend directory, use relative imports
-    from api import upload, projects, milestones, reports, compliance, notifications, health, kb
+    from api import upload, projects, milestones, reports, compliance, notifications, health, kb, chat  # type: ignore
 
 from fastapi.responses import StreamingResponse
 import asyncio
@@ -57,6 +66,7 @@ app.include_router(reports.router, prefix="/api", tags=["reports"])
 app.include_router(compliance.router, prefix="/api", tags=["compliance"])
 app.include_router(notifications.router, prefix="/api", tags=["notifications"])
 app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(kb.router)
 
 @app.get("/api/agent-stream/{jobId}")
@@ -77,7 +87,7 @@ async def agent_stream(jobId: str):
         try:
             from backend.api.upload import job_tracker
         except ModuleNotFoundError:
-            from api.upload import job_tracker
+            from api.upload import job_tracker  # type: ignore
 
         # Wait up to 5s for the job to appear
         for _ in range(10):

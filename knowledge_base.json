@@ -1,0 +1,265 @@
+{
+  "cidb_rules": {
+    "grades": {
+      "G1": {
+        "max_value": 200000,
+        "required_docs": [
+          "SSM Company Registration",
+          "Bank Statement",
+          "CIDB Registration Certificate"
+        ],
+        "project_types": [
+          "Small repairs",
+          "General maintenance",
+          "Minor construction works"
+        ]
+      },
+      "G2": {
+        "max_value": 500000,
+        "required_docs": [
+          "SSM Company Registration",
+          "Bank Statement",
+          "CIDB Registration Certificate"
+        ],
+        "project_types": [
+          "Small construction",
+          "Renovation works",
+          "Minor infrastructure"
+        ]
+      },
+      "G3": {
+        "max_value": 1000000,
+        "required_docs": [
+          "SSM Company Registration",
+          "Financial Statement",
+          "CIDB Registration Certificate",
+          "Technical Personnel Declaration"
+        ],
+        "project_types": [
+          "General building works",
+          "Medium infrastructure",
+          "Civil engineering"
+        ]
+      },
+      "G4": {
+        "max_value": 3000000,
+        "required_docs": [
+          "SSM Company Registration",
+          "Audited Financial Statement",
+          "CIDB Registration Certificate",
+          "Technical Personnel Declaration"
+        ],
+        "project_types": [
+          "Medium building works",
+          "Infrastructure projects",
+          "Specialized construction"
+        ]
+      },
+      "G5": {
+        "max_value": 5000000,
+        "required_docs": [
+          "SSM Company Registration",
+          "Audited Financial Statement",
+          "CIDB Registration Certificate",
+          "Technical Personnel Declaration",
+          "ISO Certification"
+        ],
+        "project_types": [
+          "Large building works",
+          "Heavy infrastructure",
+          "Complex engineering projects"
+        ]
+      },
+      "G6": {
+        "max_value": 10000000,
+        "required_docs": [
+          "SSM Company Registration",
+          "Audited Financial Statement",
+          "CIDB Registration Certificate",
+          "Technical Personnel Declaration",
+          "ISO Certification"
+        ],
+        "project_types": [
+          "Large scale commercial buildings",
+          "Heavy civil engineering",
+          "High-rise construction"
+        ]
+      },
+      "G7": {
+        "max_value": null,
+        "required_docs": [
+          "SSM Company Registration",
+          "Audited Financial Statement",
+          "CIDB Registration Certificate",
+          "Technical Personnel Declaration",
+          "ISO Certification"
+        ],
+        "project_types": [
+          "Mega projects",
+          "Unlimited scale infrastructure",
+          "International scale developments"
+        ]
+      }
+    }
+  },
+  "doc_checklist": {
+    "pre_construction": [
+      "Form of Tender",
+      "Letter of Award",
+      "Works Programme",
+      "Method Statement",
+      "Construction Traffic Management Plan (CTMP)",
+      "Job Hazard Analysis (JHA)",
+      "Traffic HIRARC Register"
+    ],
+    "during_construction": [
+      "Early Warning Register",
+      "Early Warning Notice",
+      "Interim Certificate",
+      "Certificate of Extension of Time",
+      "Certificate of Non-Completion",
+      "Compensation Event Quotation",
+      "Mill Certificates",
+      "Certificate of Approval (COA)",
+      "Perakuan Pematuhan Standard (PPS)",
+      "Product Certification (PC)",
+      "Full Type Test Report (FTTR)",
+      "Bill of Lading"
+    ],
+    "handover": [
+      "Certificate of Practical Completion (CPC)",
+      "Certificate of Making Good Defects (CMGD)",
+      "Final Certificate",
+      "Certificate of Determination Cost"
+    ]
+  },
+  "compliance_rules": {
+    "rules": [
+      {
+        "rule_id": "R001",
+        "condition": "When importing construction products and materials into the local market (Act 520)",
+        "required": [
+          "Certificate of Approval (COA)",
+          "Perakuan Pematuhan Standard (PPS)",
+          "Product Certification (PC) or Full Type Test Report (FTTR)"
+        ],
+        "consequence": "Consignment will be seized, legal action taken, or products disposed if testing fails at point of entry."
+      },
+      {
+        "rule_id": "R002",
+        "condition": "Before Date of Commencement of works",
+        "required": [
+          "Works Programme",
+          "Method Statement"
+        ],
+        "consequence": "Delay in project commencement approval and potential breach of Contract Clause 5.3."
+      },
+      {
+        "rule_id": "R003",
+        "condition": "When construction works are adjacent to or above roadways",
+        "required": [
+          "Construction Traffic Management Plan (CTMP)",
+          "Job Hazard Analysis (JHA)",
+          "Traffic HIRARC Register"
+        ],
+        "consequence": "Work stoppage due to non-compliance with CIS 28:2021 and potential safety penalties."
+      },
+      {
+        "rule_id": "R004",
+        "condition": "When importing iron and steel products",
+        "required": [
+          "Original or Certified Copy of Mill Certificates"
+        ],
+        "consequence": "Denial of Certificate of Approval (COA) and rejection of materials."
+      },
+      {
+        "rule_id": "R005",
+        "condition": "When matters arise that could delay completion, increase costs, or impair performance",
+        "required": [
+          "Early Warning Notice",
+          "Early Warning Register update"
+        ],
+        "consequence": "Failure to record may prejudice claims for extension of time or additional costs."
+      }
+    ]
+  },
+  "document_definitions": {
+    "documents": {
+      "COA": {
+        "full_name": "Certificate of Approval",
+        "issued_by": "CIDB",
+        "validity_period": "Per consignment",
+        "what_to_check": [
+          "Verifies imported construction products meet specified Malaysian Standards criteria at ports or customs"
+        ]
+      },
+      "PPS": {
+        "full_name": "Perakuan Pematuhan Standard",
+        "issued_by": "CIDB",
+        "validity_period": "Varies depending on product",
+        "what_to_check": [
+          "Must be applied for by importers before they can obtain the COA"
+        ]
+      },
+      "PC": {
+        "full_name": "Product Certification",
+        "issued_by": "CIDB-recognized Certification Body",
+        "validity_period": "Long-term",
+        "what_to_check": [
+          "Proves product is Malaysian Standard compliant",
+          "Requires factory audits and ongoing market sampling"
+        ]
+      },
+      "FTTR": {
+        "full_name": "Full Type Test Report",
+        "issued_by": "ISO/IEC 17025 accredited laboratory",
+        "validity_period": "Generally 6 months (3 months for cement)",
+        "what_to_check": [
+          "Comprehensive laboratory test report according to test requirements in related Malaysian Standard"
+        ]
+      },
+      "Early_Warning_Register": {
+        "full_name": "Early Warning Register",
+        "issued_by": "Superintending Officer (S.O.)",
+        "validity_period": "Project duration",
+        "what_to_check": [
+          "Logs potential issues such as delays, cost increases, or performance impairments",
+          "Required under Clause 24.3 of CIDB Standard Form of Contract 2022"
+        ]
+      },
+      "CPC": {
+        "full_name": "Certificate of Practical Completion",
+        "issued_by": "Superintending Officer (S.O.)",
+        "validity_period": "Post-completion",
+        "what_to_check": [
+          "Certifies that a section or the whole of the works is substantially complete and ready for practical use"
+        ]
+      },
+      "CMGD": {
+        "full_name": "Certificate of Making Good Defects",
+        "issued_by": "Superintending Officer (S.O.)",
+        "validity_period": "Post-Defect Liability Period",
+        "what_to_check": [
+          "Confirms the contractor has successfully rectified all identified defects after the Defect Liability Period ends"
+        ]
+      },
+      "Interim_Certificate": {
+        "full_name": "Interim Certificate",
+        "issued_by": "Superintending Officer (S.O.)",
+        "validity_period": "Progressive",
+        "what_to_check": [
+          "Issued within 21 days of receiving a Statement of Work Done",
+          "Authorizes progressive payments to the contractor for the gross value of work executed"
+        ]
+      },
+      "Certificate_of_Determination_Cost": {
+        "full_name": "Certificate of Determination Cost",
+        "issued_by": "Superintending Officer (S.O.)",
+        "validity_period": "Upon contract termination",
+        "what_to_check": [
+          "Compares the Final Contract Sum with the Completion Cost to determine outstanding debts owed by either party"
+        ]
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
-def calculate_health_score(project: Dict[str, Any]) -> float:
+def calculate_health_score(project: Dict[str, Any]) -> Dict[str, Any]:
     """
     Calculate project health score based on compliance, schedule, and cost.
 
@@ -20,7 +20,7 @@ def calculate_health_score(project: Dict[str, Any]) -> float:
         project: Project document from Firestore
 
     Returns:
-        Health score (0-100)
+        Dict with 'score' and 'breakdown'
     """
     compliance = project.get("compliance_score", {})
 
@@ -50,7 +50,14 @@ def calculate_health_score(project: Dict[str, Any]) -> float:
         compliance_score * 0.25
     )
 
-    return round(health, 1)
+    return {
+        "score": round(health, 1),
+        "breakdown": {
+            "schedule": round(schedule_score, 1),
+            "cost": round(cost_score, 1),
+            "compliance": round(compliance_score, 1)
+        }
+    }
 
 
 @router.get("/projects")
@@ -61,7 +68,9 @@ async def list_projects():
     # Add health score to each project
     for project in projects:
         if "health_score" not in project:
-            project["health_score"] = calculate_health_score(project)
+            health_data = calculate_health_score(project)
+            project["health_score"] = health_data["score"]
+            project["health_breakdown"] = health_data["breakdown"]
 
     return projects
 
@@ -81,7 +90,9 @@ async def get_project(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
 
     # Calculate and add health score
-    project["health_score"] = calculate_health_score(project)
+    health_data = calculate_health_score(project)
+    project["health_score"] = health_data["score"]
+    project["health_breakdown"] = health_data["breakdown"]
 
     return project
 
@@ -129,7 +140,8 @@ async def get_project_alerts(project_id: str):
                 })
 
     # Alert 2: Low health score
-    health = calculate_health_score(project)
+    health_data = calculate_health_score(project)
+    health = health_data["score"]
     if health < 70:
         alerts.append({
             "id": 2,

@@ -5,7 +5,7 @@
  */
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { Component } from 'react';
-import { HardHat, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import Home from './pages/Home.jsx';
 import Project from './pages/Project.jsx';
@@ -55,9 +55,6 @@ function Shell() {
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
           aria-label="Buildora Home"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#f97316] flex items-center justify-center flex-shrink-0 shadow-sm">
-            <HardHat className="w-4 h-4 text-white" />
-          </div>
           <span className="font-bold text-[#1c1b18] text-lg tracking-tight">Buildora</span>
         </Link>
       </header>

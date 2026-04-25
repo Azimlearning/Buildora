@@ -125,7 +125,7 @@ export default function Home() {
         <div className="flex items-end justify-between mb-8">
           <div>
             <h1 className="text-[28px] font-bold text-[#1c1b18] tracking-tight font-outfit">My Projects</h1>
-            <p className="text-[#6b6860] mt-1">{projects.length} active project{projects.length !== 1 ? 's' : ''}</p>
+            <p className="text-[#6b6860] mt-1">{projects.length} project{projects.length !== 1 ? 's' : ''}</p>
           </div>
           <div className="flex items-center gap-3">
             <input 
@@ -170,7 +170,7 @@ export default function Home() {
             const bgColor = CARD_COLORS[index % CARD_COLORS.length];
             const Icon = CARD_ICONS[index % CARD_ICONS.length];
             
-            const statusText = p.status || 'active';
+            // Status badge removed per UX cleanup
             
             return (
               <div 
@@ -211,14 +211,9 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* Bottom: Ring & Badge */}
-                <div className="flex justify-between items-end">
+                {/* Bottom: Health Ring */}
+                <div className="flex items-end">
                   <HealthRing score={p.health_score ?? 0} />
-                  <span 
-                    className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/10 text-white/80 border border-white/10"
-                  >
-                    {statusText === 'active' ? 'Active' : statusText.replace('-', ' ')}
-                  </span>
                 </div>
               </div>
             );

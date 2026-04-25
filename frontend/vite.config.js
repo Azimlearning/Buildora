@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    strictPort: false,  // fall back to next available port if 5173 is taken
     open: true,
   },
 });

@@ -17,6 +17,7 @@ export const DEMO_PROJECTS = [
     start_date: '2023-08-01',
     contract_value: 'RM 12,500,000',
     health_score: 74,
+    health_breakdown: { schedule: 80, cost: 70, compliance: 70 },
     description: 'Phase 2 residential development comprising 3 blocks of affordable housing under PPR programme.',
   },
   {
@@ -28,6 +29,7 @@ export const DEMO_PROJECTS = [
     start_date: '2024-01-15',
     contract_value: 'RM 8,200,000',
     health_score: 88,
+    health_breakdown: { schedule: 95, cost: 85, compliance: 80 },
     description: 'Modernization of observation deck facilities and structural reinforcement of the antenna mast.',
   },
   {
@@ -39,6 +41,7 @@ export const DEMO_PROJECTS = [
     start_date: '2023-11-01',
     contract_value: 'RM 24,000,000',
     health_score: 55,
+    health_breakdown: { schedule: 40, cost: 60, compliance: 75 },
     description: 'Cable replacement and resurfacing of the northbound lanes. High urgency due to structural fatigue alerts.',
   },
   {
@@ -50,6 +53,7 @@ export const DEMO_PROJECTS = [
     start_date: '2024-03-10',
     contract_value: 'RM 45,500,000',
     health_score: 92,
+    health_breakdown: { schedule: 98, cost: 90, compliance: 85 },
     description: 'Construction of the main train depot, maintenance facilities, and operations control center.',
   },
   {
@@ -61,6 +65,7 @@ export const DEMO_PROJECTS = [
     start_date: '2022-09-01',
     contract_value: 'RM 18,300,000',
     health_score: 65,
+    health_breakdown: { schedule: 50, cost: 70, compliance: 85 },
     description: 'Extension of the pediatric wing including new specialized ICUs and quarantine wards.',
   }
 ];
@@ -192,11 +197,11 @@ export const getComplianceScore = (id) => request(`/api/compliance/${id}`);
 
 /**
  * Get notifications/alerts for a project (Agent D).
- * GET /notifications/:id
+ * GET /api/notifications/:id
  * @param {string} id - Project ID
  * @returns {Promise<{ project_id: string, count: number, notifications: Notification[] }>}
  */
-export const getNotifications = (id) => request(`/notifications/${id}`).catch(() => ({
+export const getNotifications = (id) => request(`/api/notifications/${id}`).catch(() => ({
   project_id: id,
   count: 0,
   notifications: [],
@@ -204,12 +209,12 @@ export const getNotifications = (id) => request(`/notifications/${id}`).catch(()
 
 /**
  * Trigger Agent D to process alerts for a project.
- * POST /notifications/:id
+ * POST /api/notifications/:id
  * @param {string} id - Project ID
  * @returns {Promise<Object>}
  */
 export const triggerNotifications = (id) =>
-  request(`/notifications/${id}`, { method: 'POST' });
+  request(`/api/notifications/${id}`, { method: 'POST' });
 
 /**
  * Returns the full SSE URL for agent streaming.

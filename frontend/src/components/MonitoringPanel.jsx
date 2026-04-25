@@ -160,22 +160,13 @@ function SkeletonMonitoring() {
 }
 
 /* ── Main panel ────────────────────────────────────────────── */
-export default function MonitoringPanel({ projectId }) {
+export default function MonitoringPanel({ projectId, project }) {
   const [monitoring, setMonitoring] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
-    if (!projectId) return;
-    fetchMonitoring();
-  }, [projectId]);
-
-  const fetchMonitoring = async () => {
-    setLoading(true);
-    try {
-      // Fetch project data which includes monitoring_results from Agent B
-      const response = await fetch(`/api/projects/${projectId}`);
-      const project = await response.json();
+    if (project) {
       setMonitoring(project.monitoring_results || {
         total_alerts: 0,
         critical_alerts: 0,
@@ -184,19 +175,12 @@ export default function MonitoringPanel({ projectId }) {
         anomaly_alerts: [],
         alerts: []
       });
-    } catch (error) {
-      console.error('Failed to fetch monitoring data:', error);
-      setMonitoring({
-        total_alerts: 0,
-        critical_alerts: 0,
-        delay_alerts: [],
-        cost_variance_alerts: [],
-        anomaly_alerts: [],
-        alerts: []
-      });
-    } finally {
-      setLoading(false);
     }
+  }, [project]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 500); // Simulate refresh
   };
 
   if (!monitoring && !loading) return null;
@@ -233,7 +217,7 @@ export default function MonitoringPanel({ projectId }) {
         <div className="flex items-center gap-2">
           <button
             className="p-1.5 rounded-lg hover:bg-[#f0efec] text-[#9b9794] hover:text-[#1c1b18] transition-colors"
-            onClick={(e) => { e.stopPropagation(); fetchMonitoring(); }}
+            onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
             title="Refresh"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -289,13 +273,13 @@ export default function MonitoringPanel({ projectId }) {
                 </div>
               )}
 
-              {/* Status footer */}
-              <div className="flex items-center gap-2 pt-3 border-t border-[#e4e2dc]">
+              {/* Status footer - HIDDEN (no longer needed) */}
+              {/* <div className="flex items-center gap-2 pt-3 border-t border-[#e4e2dc]">
                 <Activity className="w-3.5 h-3.5 text-blue-500" />
                 <span className="text-[11px] text-[#9b9794]">
                   Monitoring thresholds: Delay &gt;3 days, Cost variance &gt;8%
                 </span>
-              </div>
+              </div> */}
             </>
           )}
         </div>

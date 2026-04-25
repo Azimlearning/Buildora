@@ -247,13 +247,7 @@ export default function NotificationsPanel({ projectId }) {
             </div>
           )}
 
-          {/* Telegram status footer */}
-          <div className="flex items-center gap-2 pt-3 border-t border-[#e4e2dc]">
-            <Send className="w-3.5 h-3.5 text-[#0088cc]" />
-            <span className="text-[11px] text-[#9b9794]">
-              Alerts are also sent to the PM's Telegram
-            </span>
-          </div>
+          {/* Telegram status footer - REMOVED */}
         </div>
       )}
     </div>

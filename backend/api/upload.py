@@ -122,9 +122,25 @@ def run_orchestrator_background(project_id: str, file_paths: List[str], job_id: 
         # Update project in Firestore (non-critical, ignore failures)
         try:
             db = get_firestore_client()
-            _asyncio.run(db.update_project(project_id, {
-                "status": "processed",
-            }))
+            
+            updates = {"status": "processed"}
+            
+            if result:
+                if "extracted_fields" in result:
+                    # AgentA already saves these fields to the project.
+                    # We just log it here or keep it for reference.
+                    pass
+                
+                if "compliance_score" in result:
+                    updates["compliance_score"] = result["compliance_score"]
+                
+                if "monitoring_results" in result:
+                    updates["monitoring_results"] = result["monitoring_results"]
+                    
+                if "reports" in result:
+                    updates["reports"] = result["reports"]
+
+            _asyncio.run(db.update_project(project_id, updates))
         except Exception as ex:
             print(f"[Upload] Final status update failed (non-fatal): {ex}")
 
